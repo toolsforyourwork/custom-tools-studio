@@ -34,6 +34,7 @@
 
   function updateProjectSeo(project) {
     const pageUrl =
+      window.PROJECT_SHARE_URL ||
       `https://toolsforyourwork.github.io/custom-tools-studio/project.html?slug=${encodeURIComponent(project.slug)}`;
     const ogImage =
       `https://bpdqosfgxqawbzljafgb.supabase.co/functions/v1/og-image?slug=${encodeURIComponent(project.slug)}`;
@@ -62,7 +63,11 @@
   }
 
   async function loadCase() {
-    const slug = new URLSearchParams(window.location.search).get("slug")?.trim();
+    const slug = (
+      window.PROJECT_SLUG ||
+      new URLSearchParams(window.location.search).get("slug") ||
+      ""
+    ).trim();
     if (!slug) {
       showNotFound();
       return;
