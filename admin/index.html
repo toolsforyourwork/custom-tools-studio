@@ -118,11 +118,29 @@
             <textarea id="project-description" rows="7" maxlength="12000" placeholder="Задача, решение, процесс, результат"></textarea>
           </label>
 
-          <label>
-            <span>Ссылка на обложку</span>
-            <input id="project-cover-url" type="url" maxlength="2000" placeholder="https://...">
-            <small>На следующем этапе заменим это поле на загрузку файла прямо из админки.</small>
-          </label>
+          <div class="cover-field">
+            <div>
+              <span class="cover-label">Обложка проекта</span>
+              <small>JPG, PNG, WebP или AVIF до 10 МБ.</small>
+            </div>
+
+            <div class="cover-preview is-empty" id="cover-preview">
+              <img id="cover-preview-image" alt="Превью обложки">
+              <span id="cover-preview-empty">Обложка не выбрана</span>
+            </div>
+
+            <div class="cover-actions">
+              <label class="admin-ghost cover-upload-button">
+                <span>Выбрать файл</span>
+                <input
+                  id="project-cover-file"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/avif"
+                >
+              </label>
+              <button class="admin-mini is-danger is-hidden" id="remove-cover" type="button">Убрать обложку</button>
+            </div>
+          </div>
 
           <label class="publish-toggle">
             <input id="project-published" type="checkbox">
