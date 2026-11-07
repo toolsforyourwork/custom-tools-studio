@@ -426,3 +426,24 @@
   opacity: 0;
   pointer-events: none;
 }
+
+
+.case-fields {
+  display: grid;
+  gap: 16px;
+  padding: 20px;
+  border: 1px solid rgba(46, 42, 37, 0.12);
+  border-radius: 18px;
+  background: rgba(244, 240, 231, 0.48);
+}
+
+.case-fields__head {
+  padding-bottom: 4px;
+}
+
+.case-fields__head small {
+  display: block;
+  margin-top: 5px;
+  color: rgba(46, 42, 37, 0.56);
+  line-height: 1.45;
+}
