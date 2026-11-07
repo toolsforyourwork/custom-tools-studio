@@ -1,0 +1,27 @@
+{
+  "id": "/custom-tools-studio/",
+  "name": "Tools for your work — кастомные цифровые инструменты",
+  "short_name": "Tools for work",
+  "description": "Студия кастомных цифровых инструментов, интерфейсов, AI-связок, автоматизаций и интеграций.",
+  "lang": "ru",
+  "start_url": "/custom-tools-studio/?source=pwa",
+  "scope": "/custom-tools-studio/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#F4F0E7",
+  "theme_color": "#F4F0E7",
+  "icons": [
+    {
+      "src": "https://bpdqosfgxqawbzljafgb.supabase.co/functions/v1/app-icon?size=192",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "https://bpdqosfgxqawbzljafgb.supabase.co/functions/v1/app-icon?size=512",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
