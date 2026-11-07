@@ -42,7 +42,7 @@
 
     try {
       const query =
-        "projects?select=slug,title,short_description,description,task,solution,result,type,status,cover_url" +
+        "projects?select=id,slug,title,short_description,description,task,solution,result,type,status,cover_url" +
         `&slug=eq.${encodeURIComponent(slug)}&published=eq.true&limit=1`;
 
       const response = await fetch(`${CASE_SUPABASE_URL}/rest/v1/${query}`, {
@@ -85,6 +85,58 @@
       fillBlock("#caseTaskBlock", "#caseTask", project.task);
       fillBlock("#caseSolutionBlock", "#caseSolution", project.solution);
       fillBlock("#caseResultBlock", "#caseResult", project.result);
+
+      try {
+        const mediaResponse = await fetch(
+          `${CASE_SUPABASE_URL}/rest/v1/project_media?select=id,kind,url,caption,sort_order&project_id=eq.${encodeURIComponent(project.id)}&order=sort_order.asc,created_at.asc`,
+          {
+            headers: {
+              apikey: CASE_SUPABASE_KEY,
+              "Content-Type": "application/json"
+            }
+          }
+        );
+
+        if (mediaResponse.ok) {
+          const media = await mediaResponse.json();
+          if (Array.isArray(media) && media.length) {
+            const grid = document.querySelector("#caseMediaGrid");
+            grid.innerHTML = "";
+
+            for (const item of media) {
+              const figure = document.createElement("figure");
+              figure.className = "case-media-item";
+
+              if (item.kind === "video") {
+                const video = document.createElement("video");
+                video.src = item.url;
+                video.controls = true;
+                video.preload = "metadata";
+                video.playsInline = true;
+                figure.appendChild(video);
+              } else {
+                const img = document.createElement("img");
+                img.src = item.url;
+                img.alt = item.caption || `Медиа проекта «${project.title}»`;
+                img.loading = "lazy";
+                figure.appendChild(img);
+              }
+
+              if (item.caption) {
+                const caption = document.createElement("figcaption");
+                caption.textContent = item.caption;
+                figure.appendChild(caption);
+              }
+
+              grid.appendChild(figure);
+            }
+
+            document.querySelector("#caseMediaSection").classList.remove("is-hidden");
+          }
+        }
+      } catch (mediaError) {
+        console.error("Project media error", mediaError);
+      }
 
       document.title = `${project.title} — Studio`;
       const descriptionMeta = document.querySelector('meta[name="description"]');
