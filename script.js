@@ -367,3 +367,12 @@ if(canvas){
   if(!reduceMotion) draw();
   window.addEventListener("resize", resizeCanvas);
 }
+
+
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker
+      .register("/custom-tools-studio/sw.js", { scope: "/custom-tools-studio/" })
+      .catch(error => console.error("Service worker registration failed", error));
+  });
+}
