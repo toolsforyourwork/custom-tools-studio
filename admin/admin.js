@@ -36,6 +36,10 @@ const USER_KEY = "custom_tools_admin_user_id";
 
 let projects = [];
 let slugWasEdited = false;
+let pendingCoverFile = null;
+let currentCoverUrl = null;
+let coverRemoved = false;
+let localCoverPreviewUrl = null;
 
 function setStatus(el, message, type = "") {
   el.textContent = message;
@@ -133,6 +137,96 @@ async function verifyAdmin() {
   return Array.isArray(rows) && rows.length === 1;
 }
 
+function revokeLocalCoverPreview() {
+  if (localCoverPreviewUrl) {
+    URL.revokeObjectURL(localCoverPreviewUrl);
+    localCoverPreviewUrl = null;
+  }
+}
+
+function setCoverPreview(url = null) {
+  const preview = document.querySelector("#cover-preview");
+  const image = document.querySelector("#cover-preview-image");
+  const empty = document.querySelector("#cover-preview-empty");
+  const removeButton = document.querySelector("#remove-cover");
+
+  if (url) {
+    preview.classList.remove("is-empty");
+    image.src = url;
+    image.hidden = false;
+    empty.hidden = true;
+    removeButton.classList.remove("is-hidden");
+  } else {
+    preview.classList.add("is-empty");
+    image.removeAttribute("src");
+    image.hidden = true;
+    empty.hidden = false;
+    removeButton.classList.add("is-hidden");
+  }
+}
+
+function getFileExtension(file) {
+  const byMime = {
+    "image/jpeg": "jpg",
+    "image/png": "png",
+    "image/webp": "webp",
+    "image/avif": "avif"
+  };
+  return byMime[file.type] || "img";
+}
+
+async function uploadCover(file, slug) {
+  if (!file) return null;
+
+  const allowed = ["image/jpeg", "image/png", "image/webp", "image/avif"];
+  if (!allowed.includes(file.type)) {
+    throw new Error("Формат обложки не поддерживается.");
+  }
+
+  if (file.size > 10 * 1024 * 1024) {
+    throw new Error("Обложка должна весить не больше 10 МБ.");
+  }
+
+  const safeSlug = slugify(slug || "project") || "project";
+  const ext = getFileExtension(file);
+  const objectPath = `covers/${safeSlug}-${Date.now()}-${crypto.randomUUID().slice(0, 8)}.${ext}`;
+  const encodedPath = objectPath.split("/").map(encodeURIComponent).join("/");
+
+  async function doUpload(retry = true) {
+    const token = currentToken();
+    const response = await fetch(
+      `${SUPABASE_URL}/storage/v1/object/project-covers/${encodedPath}`,
+      {
+        method: "POST",
+        headers: {
+          apikey: SUPABASE_KEY,
+          Authorization: `Bearer ${token}`,
+          "Content-Type": file.type,
+          "x-upsert": "false"
+        },
+        body: file
+      }
+    );
+
+    if (response.status === 401 && retry && await refreshSession()) {
+      return doUpload(false);
+    }
+
+    if (!response.ok) {
+      let message = `Storage error ${response.status}`;
+      try {
+        const data = await response.json();
+        message = data?.message || data?.error || message;
+      } catch {}
+      throw new Error(message);
+    }
+  }
+
+  await doUpload();
+
+  return `${SUPABASE_URL}/storage/v1/object/public/project-covers/${encodedPath}`;
+}
+
 function slugify(value) {
   const map = {
     а:"a",б:"b",в:"v",г:"g",д:"d",е:"e",ё:"e",ж:"zh",з:"z",и:"i",й:"y",
@@ -160,6 +254,11 @@ function resetEditor() {
   editorEyebrow.textContent = "Новый проект";
   editorTitle.textContent = "Добавить проект";
   slugWasEdited = false;
+  pendingCoverFile = null;
+  currentCoverUrl = null;
+  coverRemoved = false;
+  revokeLocalCoverPreview();
+  setCoverPreview(null);
   setStatus(editorStatus, "");
 }
 
@@ -179,8 +278,11 @@ function openEditProject(project) {
   document.querySelector("#project-sort-order").value = project.sort_order ?? 0;
   document.querySelector("#project-short-description").value = project.short_description || "";
   document.querySelector("#project-description").value = project.description || "";
-  document.querySelector("#project-cover-url").value = project.cover_url || "";
   document.querySelector("#project-published").checked = Boolean(project.published);
+  currentCoverUrl = project.cover_url || null;
+  coverRemoved = false;
+  pendingCoverFile = null;
+  setCoverPreview(currentCoverUrl);
 
   editorEyebrow.textContent = "Редактирование";
   editorTitle.textContent = project.title || "Проект";
@@ -393,15 +495,24 @@ projectForm.addEventListener("submit", async (event) => {
     sort_order: Number(document.querySelector("#project-sort-order").value || 0),
     short_description: document.querySelector("#project-short-description").value.trim() || null,
     description: document.querySelector("#project-description").value.trim() || null,
-    cover_url: document.querySelector("#project-cover-url").value.trim() || null,
+    cover_url: coverRemoved ? null : currentCoverUrl,
     published: document.querySelector("#project-published").checked
   };
 
   const saveButton = document.querySelector("#save-project");
   saveButton.disabled = true;
-  setStatus(editorStatus, "Сохраняю…");
+  setStatus(editorStatus, pendingCoverFile ? "Загружаю обложку…" : "Сохраняю…");
 
   try {
+    if (pendingCoverFile) {
+      payload.cover_url = await uploadCover(pendingCoverFile, slug);
+      currentCoverUrl = payload.cover_url;
+      pendingCoverFile = null;
+      coverRemoved = false;
+      setCoverPreview(currentCoverUrl);
+      setStatus(editorStatus, "Обложка загружена. Сохраняю проект…");
+    }
+
     if (id) {
       await api(
         `/rest/v1/projects?id=eq.${encodeURIComponent(id)}`,
@@ -446,6 +557,41 @@ document.querySelector("#project-title").addEventListener("input", (event) => {
 
 document.querySelector("#project-slug").addEventListener("input", () => {
   slugWasEdited = true;
+});
+
+document.querySelector("#project-cover-file").addEventListener("change", (event) => {
+  const file = event.target.files?.[0] || null;
+  if (!file) return;
+
+  const allowed = ["image/jpeg", "image/png", "image/webp", "image/avif"];
+  if (!allowed.includes(file.type)) {
+    event.target.value = "";
+    setStatus(editorStatus, "Поддерживаются только JPG, PNG, WebP и AVIF.", "error");
+    return;
+  }
+
+  if (file.size > 10 * 1024 * 1024) {
+    event.target.value = "";
+    setStatus(editorStatus, "Файл больше 10 МБ. Выбери более лёгкую обложку.", "error");
+    return;
+  }
+
+  revokeLocalCoverPreview();
+  localCoverPreviewUrl = URL.createObjectURL(file);
+  pendingCoverFile = file;
+  coverRemoved = false;
+  setCoverPreview(localCoverPreviewUrl);
+  setStatus(editorStatus, `Выбрано: ${file.name}`);
+});
+
+document.querySelector("#remove-cover").addEventListener("click", () => {
+  pendingCoverFile = null;
+  currentCoverUrl = null;
+  coverRemoved = true;
+  document.querySelector("#project-cover-file").value = "";
+  revokeLocalCoverPreview();
+  setCoverPreview(null);
+  setStatus(editorStatus, "Обложка будет убрана после сохранения.");
 });
 
 newProjectButton.addEventListener("click", openNewProject);
