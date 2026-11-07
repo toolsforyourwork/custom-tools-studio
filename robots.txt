@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /custom-tools-studio/admin/
+
+Sitemap: https://toolsforyourwork.github.io/custom-tools-studio/sitemap.xml
