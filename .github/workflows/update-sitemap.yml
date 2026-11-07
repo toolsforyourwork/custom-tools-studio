@@ -23,8 +23,9 @@ jobs:
           $ogBase = "https://bpdqosfgxqawbzljafgb.supabase.co/functions/v1/og-image"
           $key = "sb_publishable_FQaK_TPRAjA1NMcVG9zqzw_VFvqaRXk"
           $headers = @{ apikey = $key }
-          $uri = "$supabaseUrl/rest/v1/projects?select=slug,title,short_description,updated_at&published=eq.true&order=sort_order.asc,created_at.desc"
-          $projects = Invoke-RestMethod -Uri $uri -Headers $headers
+          $uri = "$supabaseUrl/functions/v1/public-content?mode=list"
+          $content = Invoke-RestMethod -Uri $uri -Headers $headers
+          $projects = $content.projects
 
           $urls = @(
             @{ loc = "$base/"; priority = "1.0" },
