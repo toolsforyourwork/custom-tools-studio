@@ -170,27 +170,6 @@ document.querySelectorAll('a[href$="request.html"]').forEach(link => {
   });
 });
 
-async function supabaseRequest(path, options = {}) {
-  const headers = {
-    apikey: SUPABASE_PUBLISHABLE_KEY,
-    "Content-Type": "application/json",
-    ...(options.headers || {})
-  };
-
-  const response = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
-    ...options,
-    headers
-  });
-
-  if (!response.ok) {
-    const message = await response.text();
-    throw new Error(message || `Supabase error ${response.status}`);
-  }
-
-  const text = await response.text();
-  return text ? JSON.parse(text) : null;
-}
-
 document.querySelectorAll("form.demo-form").forEach(form=>{
   const status = form.querySelector(".form-status");
 
@@ -272,9 +251,20 @@ async function loadProjects() {
   if (!grid || !empty) return;
 
   try {
-    const projects = await supabaseRequest(
-      "projects?select=slug,title,short_description,type,status,cover_url&published=eq.true&order=sort_order.asc,created_at.desc"
+    const response = await fetch(
+      `${SUPABASE_URL}/functions/v1/public-content?mode=list`,
+      {
+        headers: { apikey: SUPABASE_PUBLISHABLE_KEY },
+        cache: "no-store"
+      }
     );
+
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || !data?.ok) {
+      throw new Error(data?.error || `HTTP ${response.status}`);
+    }
+
+    const projects = data.projects || [];
 
     grid.replaceChildren();
 
