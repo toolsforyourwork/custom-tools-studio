@@ -27,6 +27,24 @@
     container.appendChild(tag);
   }
 
+  function safeCaseMediaUrl(value, bucket) {
+    if (!value) return null;
+
+    try {
+      const url = new URL(value);
+      const prefix =
+        `${CASE_SUPABASE_URL}/storage/v1/object/public/${bucket}/`;
+
+      if (url.protocol !== "https:" || !url.href.startsWith(prefix)) {
+        return null;
+      }
+
+      return url.href;
+    } catch {
+      return null;
+    }
+  }
+
   function setSeoMeta(selector, value, attribute = "content") {
     const el = document.querySelector(selector);
     if (el && value) el.setAttribute(attribute, value);
@@ -102,9 +120,10 @@
       addTag(meta, project.type);
       addTag(meta, STATUS_LABELS[project.status] || project.status);
 
-      if (project.cover_url) {
+      const safeCoverUrl = safeCaseMediaUrl(project.cover_url, "project-covers");
+      if (safeCoverUrl) {
         const cover = document.querySelector("#caseCover");
-        cover.src = project.cover_url;
+        cover.src = safeCoverUrl;
         cover.alt = `Обложка проекта «${project.title}»`;
         document.querySelector("#caseCoverWrap").classList.remove("is-hidden");
       }
@@ -137,19 +156,22 @@
             grid.innerHTML = "";
 
             for (const item of media) {
+              const mediaUrl = safeCaseMediaUrl(item.url, "project-media");
+              if (!mediaUrl) continue;
+
               const figure = document.createElement("figure");
               figure.className = "case-media-item";
 
               if (item.kind === "video") {
                 const video = document.createElement("video");
-                video.src = item.url;
+                video.src = mediaUrl;
                 video.controls = true;
                 video.preload = "metadata";
                 video.playsInline = true;
                 figure.appendChild(video);
               } else {
                 const img = document.createElement("img");
-                img.src = item.url;
+                img.src = mediaUrl;
                 img.alt = item.caption || `Медиа проекта «${project.title}»`;
                 img.loading = "lazy";
                 figure.appendChild(img);
