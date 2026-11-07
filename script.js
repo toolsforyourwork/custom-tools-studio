@@ -99,16 +99,13 @@ document.querySelectorAll("form.demo-form").forEach(form=>{
   form.addEventListener("submit", async e=>{
     e.preventDefault();
 
-    const inputs = form.querySelectorAll("input");
-    const textarea = form.querySelector("textarea");
     const button = form.querySelector('button[type="submit"]');
 
     const payload = {
-      name: (inputs[0]?.value || "").trim(),
-      contact: (inputs[1]?.value || "").trim(),
-      message: (textarea?.value || "").trim(),
-      source: "website",
-      status: "new"
+      name: (form.elements.name?.value || "").trim(),
+      contact: (form.elements.contact?.value || "").trim(),
+      message: (form.elements.message?.value || "").trim(),
+      website: (form.elements.website?.value || "").trim()
     };
 
     if (!payload.name || !payload.contact || !payload.message) {
@@ -120,17 +117,31 @@ document.querySelectorAll("form.demo-form").forEach(form=>{
     status.textContent = "Отправляем…";
 
     try {
-      await supabaseRequest("contact_requests", {
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/submit-contact`, {
         method: "POST",
-        headers: { Prefer: "return=minimal" },
+        headers: {
+          apikey: SUPABASE_PUBLISHABLE_KEY,
+          "Content-Type": "application/json"
+        },
         body: JSON.stringify(payload)
       });
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        if (response.status === 429 || data?.error === "rate_limited") {
+          throw new Error("rate_limited");
+        }
+        throw new Error(data?.error || `HTTP ${response.status}`);
+      }
 
       form.reset();
       status.textContent = "Готово. Заявка отправлена.";
     } catch (error) {
       console.error(error);
-      status.textContent = "Не получилось отправить заявку. Попробуй ещё раз.";
+      status.textContent = error.message === "rate_limited"
+        ? "Слишком много заявок подряд. Попробуй чуть позже."
+        : "Не получилось отправить заявку. Попробуй ещё раз.";
     } finally {
       button.disabled = false;
     }
