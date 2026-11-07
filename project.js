@@ -147,6 +147,10 @@
       loading.classList.add("is-hidden");
       notFound.classList.add("is-hidden");
       content.classList.remove("is-hidden");
+
+      window.trackSiteEvent?.("project_view", {
+        project_slug: project.slug
+      });
     } catch (error) {
       console.error(error);
       showNotFound();
