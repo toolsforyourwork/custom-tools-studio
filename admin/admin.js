@@ -39,6 +39,9 @@ let analyticsDays = 7;
 let slugWasEdited = false;
 let pendingCoverFile = null;
 let currentCoverUrl = null;
+let currentCoverStoragePath = null;
+let originalCoverUrl = null;
+let originalCoverStoragePath = null;
 let coverRemoved = false;
 let localCoverPreviewUrl = null;
 let currentProjectMedia = [];
@@ -122,6 +125,30 @@ async function api(path, options = {}, retry = true) {
       data?.error ||
       `HTTP ${response.status}`;
     throw new Error(message);
+  }
+
+  return data;
+}
+
+async function storageMaintenanceApi(body, retry = true) {
+  const response = await fetch(`${SUPABASE_URL}/functions/v1/storage-maintenance`, {
+    method: "POST",
+    headers: {
+      apikey: SUPABASE_KEY,
+      Authorization: `Bearer ${currentToken()}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(body)
+  });
+
+  if (response.status === 401 && retry && await refreshSession()) {
+    return storageMaintenanceApi(body, false);
+  }
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok || data?.ok === false) {
+    throw new Error(data?.error || data?.errors?.join("; ") || `HTTP ${response.status}`);
   }
 
   return data;
@@ -226,7 +253,10 @@ async function uploadCover(file, slug) {
 
   await doUpload();
 
-  return `${SUPABASE_URL}/storage/v1/object/public/project-covers/${encodedPath}`;
+  return {
+    url: `${SUPABASE_URL}/storage/v1/object/public/project-covers/${encodedPath}`,
+    path: objectPath
+  };
 }
 
 function mediaFileKind(file) {
@@ -315,17 +345,28 @@ async function uploadProjectMediaFile(file, projectId, slug, sortOrder) {
   const url =
     `${SUPABASE_URL}/storage/v1/object/public/project-media/${encodedPath}`;
 
-  await api("/rest/v1/project_media", {
-    method: "POST",
-    headers: { Prefer: "return=minimal" },
-    body: JSON.stringify({
-      project_id: projectId,
-      kind,
-      url,
-      caption: null,
-      sort_order: sortOrder
-    })
-  });
+  try {
+    await api("/rest/v1/project_media", {
+      method: "POST",
+      headers: { Prefer: "return=minimal" },
+      body: JSON.stringify({
+        project_id: projectId,
+        kind,
+        url,
+        storage_path: objectPath,
+        caption: null,
+        sort_order: sortOrder
+      })
+    });
+  } catch (error) {
+    try {
+      await storageMaintenanceApi({
+        action: "delete_objects",
+        objects: [{ bucket: "project-media", path: objectPath }]
+      });
+    } catch {}
+    throw error;
+  }
 }
 
 async function loadProjectMedia(projectId) {
@@ -347,7 +388,7 @@ async function loadProjectMedia(projectId) {
 
   try {
     currentProjectMedia = await api(
-      `/rest/v1/project_media?select=id,project_id,kind,url,caption,sort_order,created_at&project_id=eq.${encodeURIComponent(projectId)}&order=sort_order.asc,created_at.asc`,
+      `/rest/v1/project_media?select=id,project_id,kind,url,storage_path,caption,sort_order,created_at&project_id=eq.${encodeURIComponent(projectId)}&order=sort_order.asc,created_at.asc`,
       { method: "GET" }
     );
     renderProjectMedia();
@@ -442,25 +483,29 @@ function renderProjectMedia() {
           { method: "DELETE", headers: { Prefer: "return=minimal" } }
         );
 
-        const objectPath = mediaObjectPathFromUrl(item.url);
+        const objectPath = item.storage_path || mediaObjectPathFromUrl(item.url);
+        let cleanupWarning = false;
+
         if (objectPath) {
-          const encodedPath = objectPath.split("/").map(encodeURIComponent).join("/");
           try {
-            await fetch(
-              `${SUPABASE_URL}/storage/v1/object/project-media/${encodedPath}`,
-              {
-                method: "DELETE",
-                headers: {
-                  apikey: SUPABASE_KEY,
-                  Authorization: `Bearer ${currentToken()}`
-                }
-              }
-            );
-          } catch {}
+            await storageMaintenanceApi({
+              action: "delete_objects",
+              objects: [{ bucket: "project-media", path: objectPath }]
+            });
+          } catch (cleanupError) {
+            console.error("Media storage cleanup failed", cleanupError);
+            cleanupWarning = true;
+          }
         }
 
         await loadProjectMedia(item.project_id);
-        setStatus(status, "Медиа удалено.", "success");
+        setStatus(
+          status,
+          cleanupWarning
+            ? "Медиа удалено из кейса. Файл дочистится ночной уборкой."
+            : "Медиа и файл удалены.",
+          cleanupWarning ? "" : "success"
+        );
       } catch (error) {
         setStatus(status, `Ошибка: ${error.message}`, "error");
       }
@@ -501,6 +546,9 @@ function resetEditor() {
   slugWasEdited = false;
   pendingCoverFile = null;
   currentCoverUrl = null;
+  currentCoverStoragePath = null;
+  originalCoverUrl = null;
+  originalCoverStoragePath = null;
   coverRemoved = false;
   revokeLocalCoverPreview();
   setCoverPreview(null);
@@ -531,6 +579,9 @@ function openEditProject(project) {
   document.querySelector("#project-result").value = project.result || "";
   document.querySelector("#project-published").checked = Boolean(project.published);
   currentCoverUrl = project.cover_url || null;
+  currentCoverStoragePath = project.cover_storage_path || null;
+  originalCoverUrl = currentCoverUrl;
+  originalCoverStoragePath = currentCoverStoragePath;
   coverRemoved = false;
   pendingCoverFile = null;
   setCoverPreview(currentCoverUrl);
@@ -984,7 +1035,7 @@ async function loadProjects() {
 
   try {
     projects = await api(
-      "/rest/v1/projects?select=id,slug,title,short_description,description,task,solution,result,type,status,cover_url,sort_order,published,created_at,updated_at&order=sort_order.asc,created_at.desc",
+      "/rest/v1/projects?select=id,slug,title,short_description,description,task,solution,result,type,status,cover_url,cover_storage_path,sort_order,published,created_at,updated_at&order=sort_order.asc,created_at.desc",
       { method: "GET" }
     );
 
@@ -1043,10 +1094,15 @@ async function deleteProject(project) {
   setStatus(dashboardStatus, "Удаляю проект…");
 
   try {
-    await api(
-      `/rest/v1/projects?id=eq.${encodeURIComponent(project.id)}`,
-      { method: "DELETE", headers: { Prefer: "return=minimal" } }
-    );
+    const deletion = await storageMaintenanceApi({
+      action: "delete_project",
+      project_id: project.id
+    });
+
+    const cleanupErrors = deletion?.result?.cleanup_errors || [];
+    if (cleanupErrors.length) {
+      console.warn("Project deleted; storage cleanup will retry nightly", cleanupErrors);
+    }
 
     if (document.querySelector("#project-id").value === project.id) {
       closeEditor();
@@ -1123,18 +1179,25 @@ projectForm.addEventListener("submit", async (event) => {
     solution: document.querySelector("#project-solution").value.trim() || null,
     result: document.querySelector("#project-result").value.trim() || null,
     cover_url: coverRemoved ? null : currentCoverUrl,
+    cover_storage_path: coverRemoved ? null : currentCoverStoragePath,
     published: document.querySelector("#project-published").checked
   };
 
   const saveButton = document.querySelector("#save-project");
+  const previousCoverUrl = originalCoverUrl;
+  const previousCoverStoragePath = originalCoverStoragePath;
+  let uploadedCover = null;
+
   saveButton.disabled = true;
   setStatus(editorStatus, pendingCoverFile ? "Загружаю обложку…" : "Сохраняю…");
 
   try {
     if (pendingCoverFile) {
-      payload.cover_url = await uploadCover(pendingCoverFile, slug);
-      currentCoverUrl = payload.cover_url;
-      pendingCoverFile = null;
+      uploadedCover = await uploadCover(pendingCoverFile, slug);
+      payload.cover_url = uploadedCover.url;
+      payload.cover_storage_path = uploadedCover.path;
+      currentCoverUrl = uploadedCover.url;
+      currentCoverStoragePath = uploadedCover.path;
       coverRemoved = false;
       setCoverPreview(currentCoverUrl);
       setStatus(editorStatus, "Обложка загружена. Сохраняю проект…");
@@ -1172,8 +1235,48 @@ projectForm.addEventListener("submit", async (event) => {
       setStatus(editorStatus, "Проект создан. Теперь можно добавить медиагалерею.", "success");
     }
 
+    pendingCoverFile = null;
+
+    const savedCoverPath = payload.cover_storage_path || null;
+    if (
+      previousCoverStoragePath &&
+      previousCoverStoragePath !== savedCoverPath
+    ) {
+      try {
+        await storageMaintenanceApi({
+          action: "delete_objects",
+          objects: [{
+            bucket: "project-covers",
+            path: previousCoverStoragePath
+          }]
+        });
+      } catch (cleanupError) {
+        console.error("Old cover cleanup failed", cleanupError);
+      }
+    }
+
+    originalCoverUrl = payload.cover_url || null;
+    originalCoverStoragePath = savedCoverPath;
+    currentCoverUrl = originalCoverUrl;
+    currentCoverStoragePath = originalCoverStoragePath;
+
     await loadProjects();
   } catch (error) {
+    if (uploadedCover?.path) {
+      try {
+        await storageMaintenanceApi({
+          action: "delete_objects",
+          objects: [{
+            bucket: "project-covers",
+            path: uploadedCover.path
+          }]
+        });
+      } catch {}
+      currentCoverUrl = previousCoverUrl;
+      currentCoverStoragePath = previousCoverStoragePath;
+      setCoverPreview(previousCoverUrl);
+    }
+
     const message = String(error.message || "");
     if (message.includes("duplicate") || message.includes("projects_slug_key")) {
       setStatus(editorStatus, "Такой slug уже занят. Выбери другой.", "error");
@@ -1263,6 +1366,7 @@ document.querySelector("#upload-media-button").addEventListener("click", async (
 document.querySelector("#remove-cover").addEventListener("click", () => {
   pendingCoverFile = null;
   currentCoverUrl = null;
+  currentCoverStoragePath = null;
   coverRemoved = true;
   document.querySelector("#project-cover-file").value = "";
   revokeLocalCoverPreview();
