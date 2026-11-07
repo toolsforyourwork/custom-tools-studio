@@ -639,7 +639,7 @@ async function loadHealth() {
     overallDot.classList.add("is-loading");
   }
   if (overallText) overallText.textContent = "Проверяем…";
-  setStatus(status, "Проверяем сайт, базу, форму и Telegram…");
+  setStatus(status, "Проверяем сайт, базу, контент API, форму и Telegram…");
 
   try {
     const response = await fetch(
@@ -659,6 +659,7 @@ async function loadHealth() {
       data.checks.site?.status ? `HTTP ${data.checks.site.status}` : "Работает"
     );
     setHealthCard("#health-database", data.checks.database, "Доступна");
+    setHealthCard("#health-content", data.checks.content, "Работает");
     setHealthCard(
       "#health-form",
       data.checks.form,
@@ -693,7 +694,7 @@ async function loadHealth() {
       data.ok ? "success" : "error"
     );
   } catch (error) {
-    for (const id of ["#health-site","#health-database","#health-form","#health-telegram"]) {
+    for (const id of ["#health-site","#health-database","#health-content","#health-form","#health-telegram"]) {
       const card = document.querySelector(id);
       card?.classList.remove("is-loading", "is-ok");
       card?.classList.add("is-error");
