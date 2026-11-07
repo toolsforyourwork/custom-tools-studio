@@ -156,7 +156,7 @@ async function loadProjects() {
 
     empty.style.display = "none";
     grid.innerHTML = projects.map(project => `
-      <article class="project reveal">
+      <a class="project project-link reveal" href="project.html?slug=${encodeURIComponent(project.slug)}" aria-label="Открыть кейс: ${project.title}">
         <div class="project__visual" ${project.cover_url ? `style="background-image:url('${project.cover_url}');background-size:cover;background-position:center"` : ""}>
           ${project.cover_url ? "" : '<div class="project__dot"></div>'}
         </div>
@@ -166,7 +166,8 @@ async function loadProjects() {
         </div>
         <h3>${project.title}</h3>
         <p>${project.short_description || ""}</p>
-      </article>
+        <span class="project__open">Открыть кейс <span aria-hidden="true">↗</span></span>
+      </a>
     `).join("");
 
     document.querySelectorAll("#projectsGrid .reveal").forEach(el => revealObserver.observe(el));
