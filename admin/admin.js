@@ -35,6 +35,7 @@ const EMAIL_KEY = "custom_tools_admin_email";
 const USER_KEY = "custom_tools_admin_user_id";
 
 let projects = [];
+let analyticsDays = 7;
 let slugWasEdited = false;
 let pendingCoverFile = null;
 let currentCoverUrl = null;
@@ -609,6 +610,149 @@ function createProjectRow(project) {
   return row;
 }
 
+
+function friendlyPage(path) {
+  const map = {
+    "/custom-tools-studio/": "Главная",
+    "/custom-tools-studio/index.html": "Главная",
+    "/custom-tools-studio/approach.html": "Как работаем",
+    "/custom-tools-studio/projects.html": "Проекты",
+    "/custom-tools-studio/project.html": "Кейс проекта",
+    "/custom-tools-studio/identity.html": "Айдентика",
+    "/custom-tools-studio/contacts.html": "Наши ресурсы",
+    "/custom-tools-studio/request.html": "Заявка"
+  };
+  return map[path] || path.replace("/custom-tools-studio/", "/");
+}
+
+function sourceLabel(event) {
+  if (event.utm_source) {
+    const medium = event.utm_medium ? ` / ${event.utm_medium}` : "";
+    return `${event.utm_source}${medium}`;
+  }
+
+  if (event.referrer) {
+    try {
+      const host = new URL(event.referrer).hostname.replace(/^www\./, "");
+      if (host && host !== "toolsforyourwork.github.io") return host;
+    } catch {}
+  }
+
+  return "Прямой / неизвестно";
+}
+
+function rankedCounts(values) {
+  const counts = new Map();
+  for (const value of values) {
+    if (!value) continue;
+    counts.set(value, (counts.get(value) || 0) + 1);
+  }
+  return [...counts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 6);
+}
+
+function renderAnalyticsList(containerId, entries, emptyText) {
+  const container = document.querySelector(containerId);
+  container.innerHTML = "";
+
+  if (!entries.length) {
+    const empty = document.createElement("div");
+    empty.className = "analytics-empty";
+    empty.textContent = emptyText;
+    container.appendChild(empty);
+    return;
+  }
+
+  for (const [label, count] of entries) {
+    const row = document.createElement("div");
+    row.className = "analytics-list-row";
+
+    const name = document.createElement("span");
+    name.textContent = label;
+
+    const value = document.createElement("strong");
+    value.textContent = count;
+
+    row.append(name, value);
+    container.appendChild(row);
+  }
+}
+
+async function loadAnalytics(days = analyticsDays) {
+  analyticsDays = days;
+  const status = document.querySelector("#analytics-status");
+  setStatus(status, "Загружаю аналитику…");
+
+  document.querySelectorAll("[data-analytics-days]").forEach(button => {
+    button.classList.toggle(
+      "is-active",
+      Number(button.dataset.analyticsDays) === days
+    );
+  });
+
+  try {
+    const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+    const events = await api(
+      `/rest/v1/site_events?select=event_name,event_value,session_id,path,project_slug,referrer,utm_source,utm_medium,utm_campaign,created_at&created_at=gte.${encodeURIComponent(since)}&order=created_at.asc&limit=10000`,
+      { method: "GET" }
+    );
+
+    const pageViews = events.filter(event => event.event_name === "page_view");
+    const projectViews = events.filter(event => event.event_name === "project_view");
+    const requestViews = events.filter(event => event.event_name === "request_view");
+    const submissions = events.filter(event => event.event_name === "request_submit_success");
+    const sessions = new Set(events.map(event => event.session_id).filter(Boolean));
+
+    document.querySelector("#analytics-pageviews").textContent = pageViews.length;
+    document.querySelector("#analytics-sessions").textContent = sessions.size;
+    document.querySelector("#analytics-projectviews").textContent = projectViews.length;
+    document.querySelector("#analytics-requestviews").textContent = requestViews.length;
+    document.querySelector("#analytics-submissions").textContent = submissions.length;
+
+    const conversion = requestViews.length
+      ? (submissions.length / requestViews.length) * 100
+      : 0;
+    document.querySelector("#analytics-conversion").textContent =
+      `${conversion.toFixed(conversion >= 10 ? 0 : 1)}%`;
+
+    renderAnalyticsList(
+      "#analytics-pages",
+      rankedCounts(pageViews.map(event => friendlyPage(event.path))),
+      "Просмотров пока нет."
+    );
+
+    renderAnalyticsList(
+      "#analytics-project-list",
+      rankedCounts(projectViews.map(event => event.project_slug)),
+      "Кейсы пока не открывали."
+    );
+
+    const firstPageBySession = new Map();
+    for (const event of pageViews) {
+      if (!firstPageBySession.has(event.session_id)) {
+        firstPageBySession.set(event.session_id, event);
+      }
+    }
+
+    renderAnalyticsList(
+      "#analytics-sources",
+      rankedCounts([...firstPageBySession.values()].map(sourceLabel)),
+      "Источников пока нет."
+    );
+
+    setStatus(
+      status,
+      events.length >= 10000
+        ? "Показаны первые 10 000 событий за период."
+        : `Обновлено · событий: ${events.length}`,
+      "success"
+    );
+  } catch (error) {
+    setStatus(status, `Ошибка аналитики: ${error.message}`, "error");
+  }
+}
+
 async function loadProjects() {
   setStatus(dashboardStatus, "Загружаю проекты…");
 
@@ -703,6 +847,7 @@ async function showDashboard() {
   dashboardView.classList.remove("is-hidden");
   adminUser.textContent = sessionStorage.getItem(EMAIL_KEY) || "Администратор";
   await loadProjects();
+  await loadAnalytics(analyticsDays);
 }
 
 loginForm.addEventListener("submit", async (event) => {
@@ -900,7 +1045,16 @@ document.querySelector("#remove-cover").addEventListener("click", () => {
 newProjectButton.addEventListener("click", openNewProject);
 cancelEdit.addEventListener("click", closeEditor);
 cancelEditBottom.addEventListener("click", closeEditor);
-refreshButton.addEventListener("click", loadProjects);
+refreshButton.addEventListener("click", async () => {
+  await loadProjects();
+  await loadAnalytics(analyticsDays);
+});
+
+document.querySelectorAll("[data-analytics-days]").forEach(button => {
+  button.addEventListener("click", () => {
+    loadAnalytics(Number(button.dataset.analyticsDays || 7));
+  });
+});
 
 logoutButton.addEventListener("click", async () => {
   try {
