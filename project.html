@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#F4F0E7">
+  <meta name="description" content="Кейс студии кастомных цифровых инструментов">
+  <title>Проект — Studio</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<canvas id="network"></canvas>
+
+<header class="header" id="header">
+  <div class="container header__inner">
+    <a class="brand" href="index.html">
+      <span class="brand__mark"><span></span></span>
+      <span>studio</span>
+    </a>
+
+    <nav class="nav" id="nav">
+      <a href="index.html">Главная</a>
+      <a href="approach.html">Как работаем</a>
+      <a href="projects.html" class="active">Проекты</a>
+      <a href="identity.html">Айдентика</a>
+      <a href="contacts.html">Наши ресурсы</a>
+      <a href="request.html" class="nav-cta">Отправить заявку</a>
+    </nav>
+
+    <button class="menu" id="menu" aria-label="Меню">
+      <span></span><span></span>
+    </button>
+  </div>
+</header>
+
+<main class="case-page">
+  <div class="case-loading" id="caseLoading">
+    <div>
+      <div class="eyebrow">кейс</div>
+      <p>Загружаем проект…</p>
+    </div>
+  </div>
+
+  <div class="case-not-found is-hidden" id="caseNotFound">
+    <div class="container">
+      <div class="eyebrow">проект не найден</div>
+      <h1>Такого кейса нет или он ещё не опубликован.</h1>
+      <p>Вернись к списку проектов — там находятся все доступные кейсы.</p>
+      <a class="btn primary" href="projects.html">К проектам</a>
+    </div>
+  </div>
+
+  <article class="is-hidden" id="caseContent">
+    <section class="case-hero">
+      <div class="container">
+        <a class="case-back" href="projects.html">← Все проекты</a>
+        <div class="case-meta" id="caseMeta"></div>
+        <h1 id="caseTitle"></h1>
+        <p class="case-lead" id="caseLead"></p>
+      </div>
+    </section>
+
+    <section class="case-cover-wrap is-hidden" id="caseCoverWrap">
+      <div class="container">
+        <img class="case-cover" id="caseCover" alt="">
+      </div>
+    </section>
+
+    <section class="case-intro is-hidden" id="caseIntro">
+      <div class="container">
+        <p class="case-intro__text" id="caseDescription"></p>
+      </div>
+    </section>
+
+    <section class="section tight">
+      <div class="container">
+        <div class="case-blocks">
+          <section class="case-block is-hidden" id="caseTaskBlock">
+            <div class="case-block__index">01 / ЗАДАЧА</div>
+            <div>
+              <h2>Задача</h2>
+              <p id="caseTask"></p>
+            </div>
+          </section>
+
+          <section class="case-block is-hidden" id="caseSolutionBlock">
+            <div class="case-block__index">02 / РЕШЕНИЕ</div>
+            <div>
+              <h2>Решение</h2>
+              <p id="caseSolution"></p>
+            </div>
+          </section>
+
+          <section class="case-block is-hidden" id="caseResultBlock">
+            <div class="case-block__index">03 / РЕЗУЛЬТАТ</div>
+            <div>
+              <h2>Результат</h2>
+              <p id="caseResult"></p>
+            </div>
+          </section>
+        </div>
+
+        <section class="case-cta">
+          <div class="eyebrow">следующий проект</div>
+          <h2>Есть похожая задача или свой процесс, который хочется собрать лучше?</h2>
+          <p>Опиши задачу несколькими предложениями — этого достаточно, чтобы начать разговор.</p>
+          <a class="btn primary" href="request.html">Отправить заявку</a>
+        </section>
+      </div>
+    </section>
+  </article>
+</main>
+
+<footer class="footer">
+  <div class="container footer__inner">
+    <span>Студия кастомных цифровых инструментов</span>
+    <span data-year></span>
+  </div>
+</footer>
+
+<script src="script.js"></script>
+<script src="project.js"></script>
+</body>
+</html>
