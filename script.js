@@ -38,6 +38,13 @@ document.querySelectorAll(".reveal").forEach(el=>revealObserver.observe(el));
 const SUPABASE_URL = "https://bpdqosfgxqawbzljafgb.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_FQaK_TPRAjA1NMcVG9zqzw_VFvqaRXk";
 
+const PROJECT_STATUS_LABELS = {
+  concept: "Концепт",
+  in_progress: "В работе",
+  paused: "Пауза",
+  completed: "Готов"
+};
+
 const SITE_RESOURCES = {
   telegram:  { label: "", url: "" },
   instagram: { label: "", url: "" },
@@ -155,7 +162,7 @@ async function loadProjects() {
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:20px">
           ${project.type ? `<span class="tag">${project.type}</span>` : ""}
-          ${project.status ? `<span class="tag">${project.status}</span>` : ""}
+          ${project.status ? `<span class="tag">${PROJECT_STATUS_LABELS[project.status] || project.status}</span>` : ""}
         </div>
         <h3>${project.title}</h3>
         <p>${project.short_description || ""}</p>
