@@ -86,37 +86,41 @@
       new URLSearchParams(window.location.search).get("slug") ||
       ""
     ).trim();
+
     if (!slug) {
       showNotFound();
       return;
     }
 
     try {
-      const query =
-        "projects?select=id,slug,title,short_description,description,task,solution,result,type,status,cover_url" +
-        `&slug=eq.${encodeURIComponent(slug)}&published=eq.true&limit=1`;
-
-      const response = await fetch(`${CASE_SUPABASE_URL}/rest/v1/${query}`, {
-        headers: {
-          apikey: CASE_SUPABASE_KEY,
-          "Content-Type": "application/json"
+      const response = await fetch(
+        `${CASE_SUPABASE_URL}/functions/v1/public-content?slug=${encodeURIComponent(slug)}`,
+        {
+          headers: { apikey: CASE_SUPABASE_KEY },
+          cache: "no-store"
         }
-      });
+      );
 
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const data = await response.json().catch(() => ({}));
 
-      const rows = await response.json();
-      const project = rows?.[0];
-      if (!project) {
+      if (response.status === 404) {
         showNotFound();
         return;
       }
+
+      if (!response.ok || !data?.ok || !data?.project) {
+        throw new Error(data?.error || `HTTP ${response.status}`);
+      }
+
+      const project = data.project;
+      const media = Array.isArray(data.media) ? data.media : [];
 
       document.querySelector("#caseTitle").textContent = project.title;
       document.querySelector("#caseLead").textContent =
         project.short_description || "";
 
       const meta = document.querySelector("#caseMeta");
+      meta.replaceChildren();
       addTag(meta, project.type);
       addTag(meta, STATUS_LABELS[project.status] || project.status);
 
@@ -138,59 +142,44 @@
       fillBlock("#caseSolutionBlock", "#caseSolution", project.solution);
       fillBlock("#caseResultBlock", "#caseResult", project.result);
 
-      try {
-        const mediaResponse = await fetch(
-          `${CASE_SUPABASE_URL}/rest/v1/project_media?select=id,kind,url,caption,sort_order&project_id=eq.${encodeURIComponent(project.id)}&order=sort_order.asc,created_at.asc`,
-          {
-            headers: {
-              apikey: CASE_SUPABASE_KEY,
-              "Content-Type": "application/json"
-            }
+      if (media.length) {
+        const grid = document.querySelector("#caseMediaGrid");
+        grid.replaceChildren();
+
+        for (const item of media) {
+          const mediaUrl = safeCaseMediaUrl(item.url, "project-media");
+          if (!mediaUrl) continue;
+
+          const figure = document.createElement("figure");
+          figure.className = "case-media-item";
+
+          if (item.kind === "video") {
+            const video = document.createElement("video");
+            video.src = mediaUrl;
+            video.controls = true;
+            video.preload = "metadata";
+            video.playsInline = true;
+            figure.appendChild(video);
+          } else {
+            const img = document.createElement("img");
+            img.src = mediaUrl;
+            img.alt = item.caption || `Медиа проекта «${project.title}»`;
+            img.loading = "lazy";
+            figure.appendChild(img);
           }
-        );
 
-        if (mediaResponse.ok) {
-          const media = await mediaResponse.json();
-          if (Array.isArray(media) && media.length) {
-            const grid = document.querySelector("#caseMediaGrid");
-            grid.innerHTML = "";
-
-            for (const item of media) {
-              const mediaUrl = safeCaseMediaUrl(item.url, "project-media");
-              if (!mediaUrl) continue;
-
-              const figure = document.createElement("figure");
-              figure.className = "case-media-item";
-
-              if (item.kind === "video") {
-                const video = document.createElement("video");
-                video.src = mediaUrl;
-                video.controls = true;
-                video.preload = "metadata";
-                video.playsInline = true;
-                figure.appendChild(video);
-              } else {
-                const img = document.createElement("img");
-                img.src = mediaUrl;
-                img.alt = item.caption || `Медиа проекта «${project.title}»`;
-                img.loading = "lazy";
-                figure.appendChild(img);
-              }
-
-              if (item.caption) {
-                const caption = document.createElement("figcaption");
-                caption.textContent = item.caption;
-                figure.appendChild(caption);
-              }
-
-              grid.appendChild(figure);
-            }
-
-            document.querySelector("#caseMediaSection").classList.remove("is-hidden");
+          if (item.caption) {
+            const caption = document.createElement("figcaption");
+            caption.textContent = item.caption;
+            figure.appendChild(caption);
           }
+
+          grid.appendChild(figure);
         }
-      } catch (mediaError) {
-        console.error("Project media error", mediaError);
+
+        if (grid.children.length) {
+          document.querySelector("#caseMediaSection").classList.remove("is-hidden");
+        }
       }
 
       updateProjectSeo(project);
@@ -207,6 +196,5 @@
       showNotFound();
     }
   }
-
   loadCase();
 })();
