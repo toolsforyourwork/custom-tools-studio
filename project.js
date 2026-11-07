@@ -27,6 +27,34 @@
     container.appendChild(tag);
   }
 
+  function setSeoMeta(selector, value, attribute = "content") {
+    const el = document.querySelector(selector);
+    if (el && value) el.setAttribute(attribute, value);
+  }
+
+  function updateProjectSeo(project) {
+    const pageUrl =
+      `https://toolsforyourwork.github.io/custom-tools-studio/project.html?slug=${encodeURIComponent(project.slug)}`;
+    const ogImage =
+      `https://bpdqosfgxqawbzljafgb.supabase.co/functions/v1/og-image?slug=${encodeURIComponent(project.slug)}`;
+    const title = `${project.title} — Tools for your work`;
+    const description =
+      (project.short_description || "Кейс студии кастомных цифровых инструментов").slice(0, 160);
+
+    document.title = title;
+
+    setSeoMeta('meta[name="description"]', description);
+    setSeoMeta('meta[property="og:type"]', "article");
+    setSeoMeta('meta[property="og:title"]', project.title);
+    setSeoMeta('meta[property="og:description"]', description);
+    setSeoMeta('meta[property="og:url"]', pageUrl);
+    setSeoMeta('meta[property="og:image"]', ogImage);
+    setSeoMeta('meta[name="twitter:title"]', project.title);
+    setSeoMeta('meta[name="twitter:description"]', description);
+    setSeoMeta('meta[name="twitter:image"]', ogImage);
+    setSeoMeta('link[rel="canonical"]', pageUrl, "href");
+  }
+
   function fillBlock(blockId, textId, value) {
     if (!value?.trim()) return;
     document.querySelector(textId).textContent = value.trim();
@@ -138,11 +166,7 @@
         console.error("Project media error", mediaError);
       }
 
-      document.title = `${project.title} — Studio`;
-      const descriptionMeta = document.querySelector('meta[name="description"]');
-      if (descriptionMeta && project.short_description) {
-        descriptionMeta.content = project.short_description.slice(0, 160);
-      }
+      updateProjectSeo(project);
 
       loading.classList.add("is-hidden");
       notFound.classList.add("is-hidden");
