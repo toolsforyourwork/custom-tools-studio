@@ -1,0 +1,40 @@
+name: Production QA
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "*.html"
+      - "*.js"
+      - "*.css"
+      - "*.webmanifest"
+      - "admin/**"
+      - ".github/scripts/qa.mjs"
+      - ".github/workflows/qa.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  qa:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check JavaScript syntax
+        run: |
+          node --check script.js
+          node --check project.js
+          node --check admin/admin.js
+          node --check sw.js
+
+      - name: Static QA
+        run: node .github/scripts/qa.mjs
+
+      - name: Production QA
+        env:
+          QA_PRODUCTION: "1"
+        run: node .github/scripts/qa.mjs
