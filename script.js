@@ -191,11 +191,17 @@ document.querySelectorAll("form.demo-form").forEach(form=>{
       name: (form.elements.name?.value || "").trim(),
       contact: (form.elements.contact?.value || "").trim(),
       message: (form.elements.message?.value || "").trim(),
-      website: (form.elements.website?.value || "").trim()
+      website: (form.elements.website?.value || "").trim(),
+      consent: Boolean(form.elements.consent?.checked)
     };
 
     if (!payload.name || !payload.contact || !payload.message) {
       status.textContent = "Заполни все поля.";
+      return;
+    }
+
+    if (!payload.consent) {
+      status.textContent = "Нужно согласиться с обработкой данных.";
       return;
     }
 
