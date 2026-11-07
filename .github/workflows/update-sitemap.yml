@@ -1,0 +1,71 @@
+name: Update sitemap
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 */6 * * *"
+
+permissions:
+  contents: write
+
+jobs:
+  update-sitemap:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate sitemap
+        shell: pwsh
+        run: |
+          $base = "https://toolsforyourwork.github.io/custom-tools-studio"
+          $supabaseUrl = "https://bpdqosfgxqawbzljafgb.supabase.co"
+          $key = "sb_publishable_FQaK_TPRAjA1NMcVG9zqzw_VFvqaRXk"
+
+          $headers = @{
+            apikey = $key
+          }
+
+          $projects = Invoke-RestMethod `
+            -Uri "$supabaseUrl/rest/v1/projects?select=slug,updated_at&published=eq.true&order=sort_order.asc,created_at.desc" `
+            -Headers $headers
+
+          $urls = @(
+            @{ loc = "$base/"; priority = "1.0" },
+            @{ loc = "$base/approach.html"; priority = "0.8" },
+            @{ loc = "$base/projects.html"; priority = "0.9" },
+            @{ loc = "$base/identity.html"; priority = "0.5" },
+            @{ loc = "$base/contacts.html"; priority = "0.6" },
+            @{ loc = "$base/request.html"; priority = "0.8" }
+          )
+
+          $lines = @(
+            '<?xml version="1.0" encoding="UTF-8"?>',
+            '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
+          )
+
+          foreach ($item in $urls) {
+            $lines += "  <url><loc>$($item.loc)</loc><priority>$($item.priority)</priority></url>"
+          }
+
+          foreach ($project in $projects) {
+            $slug = [System.Uri]::EscapeDataString([string]$project.slug)
+            $loc = "$base/project.html?slug=$slug"
+            $lastmod = ([DateTimeOffset]$project.updated_at).ToString("yyyy-MM-dd")
+            $escapedLoc = [System.Security.SecurityElement]::Escape($loc)
+            $lines += "  <url><loc>$escapedLoc</loc><lastmod>$lastmod</lastmod><priority>0.8</priority></url>"
+          }
+
+          $lines += '</urlset>'
+          [IO.File]::WriteAllLines("sitemap.xml", $lines, [Text.UTF8Encoding]::new($false))
+
+      - name: Commit sitemap if changed
+        shell: pwsh
+        run: |
+          if (-not (git diff --quiet -- sitemap.xml)) {
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add sitemap.xml
+            git commit -m "Update sitemap from published projects"
+            git push
+          }
