@@ -247,6 +247,24 @@ document.querySelectorAll("form.demo-form").forEach(form=>{
   });
 });
 
+function safeProjectCoverUrl(value) {
+  if (!value) return null;
+
+  try {
+    const url = new URL(value);
+    const prefix =
+      `${SUPABASE_URL}/storage/v1/object/public/project-covers/`;
+
+    if (url.protocol !== "https:" || !url.href.startsWith(prefix)) {
+      return null;
+    }
+
+    return url.href;
+  } catch {
+    return null;
+  }
+}
+
 async function loadProjects() {
   const grid = document.getElementById("projectsGrid");
   const empty = document.getElementById("projectsEmpty");
@@ -258,38 +276,89 @@ async function loadProjects() {
       "projects?select=slug,title,short_description,type,status,cover_url&published=eq.true&order=sort_order.asc,created_at.desc"
     );
 
+    grid.replaceChildren();
+
     if (!projects || projects.length === 0) {
-      grid.innerHTML = "";
       empty.style.display = "block";
       return;
     }
 
     empty.style.display = "none";
-    grid.innerHTML = projects.map(project => `
-      <a class="project project-link reveal" href="case/${encodeURIComponent(project.slug)}/" aria-label="Открыть кейс: ${project.title}">
-        <div class="project__visual" ${project.cover_url ? `style="background-image:url('${project.cover_url}');background-size:cover;background-position:center"` : ""}>
-          ${project.cover_url ? "" : '<div class="project__dot"></div>'}
-        </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:20px">
-          ${project.type ? `<span class="tag">${project.type}</span>` : ""}
-          ${project.status ? `<span class="tag">${PROJECT_STATUS_LABELS[project.status] || project.status}</span>` : ""}
-        </div>
-        <h3>${project.title}</h3>
-        <p>${project.short_description || ""}</p>
-        <span class="project__open">Открыть кейс <span aria-hidden="true">↗</span></span>
-      </a>
-    `).join("");
 
-    document.querySelectorAll("#projectsGrid .reveal").forEach(el => revealObserver.observe(el));
+    for (const project of projects) {
+      const link = document.createElement("a");
+      link.className = "project project-link reveal";
+      link.href = `case/${encodeURIComponent(project.slug || "")}/`;
+      link.setAttribute(
+        "aria-label",
+        `Открыть кейс: ${project.title || "проект"}`
+      );
+
+      const visual = document.createElement("div");
+      visual.className = "project__visual";
+
+      const coverUrl = safeProjectCoverUrl(project.cover_url);
+      if (coverUrl) {
+        visual.style.backgroundImage = `url("${coverUrl}")`;
+        visual.style.backgroundSize = "cover";
+        visual.style.backgroundPosition = "center";
+      } else {
+        const dot = document.createElement("div");
+        dot.className = "project__dot";
+        visual.appendChild(dot);
+      }
+
+      const meta = document.createElement("div");
+      meta.style.display = "flex";
+      meta.style.gap = "8px";
+      meta.style.flexWrap = "wrap";
+      meta.style.marginTop = "20px";
+
+      if (project.type) {
+        const typeTag = document.createElement("span");
+        typeTag.className = "tag";
+        typeTag.textContent = project.type;
+        meta.appendChild(typeTag);
+      }
+
+      if (project.status) {
+        const statusTag = document.createElement("span");
+        statusTag.className = "tag";
+        statusTag.textContent =
+          PROJECT_STATUS_LABELS[project.status] || project.status;
+        meta.appendChild(statusTag);
+      }
+
+      const title = document.createElement("h3");
+      title.textContent = project.title || "";
+
+      const description = document.createElement("p");
+      description.textContent = project.short_description || "";
+
+      const open = document.createElement("span");
+      open.className = "project__open";
+      open.append(document.createTextNode("Открыть кейс "));
+
+      const arrow = document.createElement("span");
+      arrow.setAttribute("aria-hidden", "true");
+      arrow.textContent = "↗";
+      open.appendChild(arrow);
+
+      link.append(visual, meta, title, description, open);
+      grid.appendChild(link);
+      revealObserver.observe(link);
+    }
   } catch (error) {
     console.error(error);
-    grid.innerHTML = "";
+    grid.replaceChildren();
     empty.style.display = "block";
     const p = empty.querySelector("p");
-    if (p) p.textContent = "Не удалось загрузить проекты. Проверь подключение к Supabase.";
+    if (p) {
+      p.textContent =
+        "Не удалось загрузить проекты. Проверь подключение к Supabase.";
+    }
   }
 }
-
 loadProjects();
 
 
