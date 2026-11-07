@@ -9,18 +9,27 @@ function updateHeader(){
 updateHeader();
 window.addEventListener("scroll", updateHeader, {passive:true});
 
-menu?.addEventListener("click", ()=>{
-  const opened = nav.classList.toggle("open");
-  menu.classList.toggle("open", opened);
+function setMenuOpen(opened) {
+  nav?.classList.toggle("open", opened);
+  menu?.classList.toggle("open", opened);
+  menu?.setAttribute("aria-expanded", opened ? "true" : "false");
   document.body.style.overflow = opened ? "hidden" : "";
+}
+
+menu?.addEventListener("click", ()=>{
+  const opened = !nav?.classList.contains("open");
+  setMenuOpen(opened);
 });
 
 document.querySelectorAll(".nav a").forEach(a=>{
-  a.addEventListener("click", ()=>{
-    nav.classList.remove("open");
-    menu?.classList.remove("open");
-    document.body.style.overflow = "";
-  });
+  a.addEventListener("click", ()=>setMenuOpen(false));
+});
+
+document.addEventListener("keydown", (event)=>{
+  if (event.key === "Escape" && nav?.classList.contains("open")) {
+    setMenuOpen(false);
+    menu?.focus();
+  }
 });
 
 const revealObserver = new IntersectionObserver(entries=>{
