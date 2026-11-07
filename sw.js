@@ -1,5 +1,5 @@
-const STATIC_CACHE = "custom-tools-static-v2";
-const RUNTIME_CACHE = "custom-tools-runtime-v2";
+const STATIC_CACHE = "custom-tools-static-v3";
+const RUNTIME_CACHE = "custom-tools-runtime-v3";
 const APP_SCOPE = "/custom-tools-studio/";
 
 const STATIC_ASSETS = [
