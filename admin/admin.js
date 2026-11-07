@@ -611,6 +611,105 @@ function createProjectRow(project) {
 }
 
 
+function setHealthCard(id, check, okText) {
+  const card = document.querySelector(id);
+  if (!card) return;
+
+  card.classList.remove("is-loading", "is-ok", "is-error");
+  card.classList.add(check?.ok ? "is-ok" : "is-error");
+
+  const value = card.querySelector(".health-card__value");
+  if (!value) return;
+
+  value.textContent = check?.ok
+    ? `${okText} · ${check.ms ?? "—"} мс`
+    : `Ошибка · ${check?.error || "нет ответа"}`;
+}
+
+async function loadHealth() {
+  const status = document.querySelector("#health-status");
+  const button = document.querySelector("#health-refresh-button");
+  const overallDot = document.querySelector("#health-overall-dot");
+  const overallText = document.querySelector("#health-overall-text");
+  const checkedAt = document.querySelector("#health-checked-at");
+
+  if (button) button.disabled = true;
+  if (overallDot) {
+    overallDot.classList.remove("is-ok", "is-error");
+    overallDot.classList.add("is-loading");
+  }
+  if (overallText) overallText.textContent = "Проверяем…";
+  setStatus(status, "Проверяем сайт, базу, форму и Telegram…");
+
+  try {
+    const response = await fetch(
+      `${SUPABASE_URL}/functions/v1/health-check?t=${Date.now()}`,
+      {
+        headers: { apikey: SUPABASE_KEY },
+        cache: "no-store"
+      }
+    );
+
+    const data = await response.json().catch(() => null);
+    if (!data?.checks) throw new Error("Некорректный ответ health-check");
+
+    setHealthCard(
+      "#health-site",
+      data.checks.site,
+      data.checks.site?.status ? `HTTP ${data.checks.site.status}` : "Работает"
+    );
+    setHealthCard("#health-database", data.checks.database, "Доступна");
+    setHealthCard(
+      "#health-form",
+      data.checks.form,
+      data.checks.form?.status ? "Endpoint доступен" : "Работает"
+    );
+
+    const telegramText = data.checks.telegram?.pending_updates
+      ? `Работает · очередь ${data.checks.telegram.pending_updates}`
+      : "Webhook работает";
+    setHealthCard("#health-telegram", data.checks.telegram, telegramText);
+
+    if (overallDot) {
+      overallDot.classList.remove("is-loading", "is-ok", "is-error");
+      overallDot.classList.add(data.ok ? "is-ok" : "is-error");
+    }
+    if (overallText) {
+      overallText.textContent = data.ok
+        ? "Все системы работают"
+        : "Есть проблема";
+    }
+
+    if (checkedAt && data.checked_at) {
+      const date = new Date(data.checked_at);
+      checkedAt.textContent = `Последняя проверка: ${date.toLocaleString("ru-RU")}`;
+    }
+
+    setStatus(
+      status,
+      data.ok
+        ? "Внешний мониторинг также проверяет систему каждые 15 минут."
+        : "Один из сервисов не прошёл проверку. GitHub-мониторинг зафиксирует сбой.",
+      data.ok ? "success" : "error"
+    );
+  } catch (error) {
+    for (const id of ["#health-site","#health-database","#health-form","#health-telegram"]) {
+      const card = document.querySelector(id);
+      card?.classList.remove("is-loading", "is-ok");
+      card?.classList.add("is-error");
+    }
+
+    if (overallDot) {
+      overallDot.classList.remove("is-loading", "is-ok");
+      overallDot.classList.add("is-error");
+    }
+    if (overallText) overallText.textContent = "Health-check недоступен";
+    setStatus(status, `Ошибка мониторинга: ${error.message}`, "error");
+  } finally {
+    if (button) button.disabled = false;
+  }
+}
+
 function friendlyPage(path) {
   const map = {
     "/custom-tools-studio/": "Главная",
@@ -848,6 +947,7 @@ async function showDashboard() {
   adminUser.textContent = sessionStorage.getItem(EMAIL_KEY) || "Администратор";
   await loadProjects();
   await loadAnalytics(analyticsDays);
+  await loadHealth();
 }
 
 loginForm.addEventListener("submit", async (event) => {
@@ -1048,7 +1148,10 @@ cancelEditBottom.addEventListener("click", closeEditor);
 refreshButton.addEventListener("click", async () => {
   await loadProjects();
   await loadAnalytics(analyticsDays);
+  await loadHealth();
 });
+
+document.querySelector("#health-refresh-button")?.addEventListener("click", loadHealth);
 
 document.querySelectorAll("[data-analytics-days]").forEach(button => {
   button.addEventListener("click", () => {
