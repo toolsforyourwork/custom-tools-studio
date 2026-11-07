@@ -42,8 +42,49 @@ function assert(condition, message) {
 }
 
 function attr(tag, name) {
-  const match = tag.match(new RegExp(String.raw`\\b${name}\\s*=\\s*["']([^"']*)["']`, "i"));
+  const pattern = "\\b" + name + "\\s*=\\s*[\\\"']([^\\\"']*)[\\\"']";
+  const match = tag.match(new RegExp(pattern, "i"));
   return match?.[1] ?? null;
+}
+
+function localTargetExists(fromFile, rawUrl) {
+  if (!rawUrl) return true;
+
+  const value = rawUrl.trim();
+  if (
+    !value ||
+    value.startsWith("#") ||
+    value.startsWith("http://") ||
+    value.startsWith("https://") ||
+    value.startsWith("mailto:") ||
+    value.startsWith("tel:") ||
+    value.startsWith("data:") ||
+    value.startsWith("javascript:")
+  ) {
+    return true;
+  }
+
+  const withoutQuery = value.split("#")[0].split("?")[0];
+  if (!withoutQuery) return true;
+
+  let target;
+
+  if (withoutQuery.startsWith("/custom-tools-studio/")) {
+    target = withoutQuery.slice("/custom-tools-studio/".length);
+  } else if (withoutQuery === "/custom-tools-studio") {
+    target = "";
+  } else if (withoutQuery.startsWith("/")) {
+    return true;
+  } else {
+    target = path.normalize(
+      path.join(path.dirname(fromFile), decodeURIComponent(withoutQuery))
+    );
+  }
+
+  if (!target || target === ".") target = "index.html";
+  if (target.endsWith("/")) target = path.join(target, "index.html");
+
+  return fs.existsSync(path.join(root, target));
 }
 
 for (const file of publicPages) {
@@ -65,6 +106,15 @@ for (const file of publicPages) {
 
   for (const match of html.matchAll(/<button\b[^>]*>/gi)) {
     assert(attr(match[0], "type") !== null, `${file}: button without type`);
+  }
+
+  for (const match of html.matchAll(/<(?:a|link|script|img)\b[^>]*(?:href|src)=["'][^"']+["'][^>]*>/gi)) {
+    const tag = match[0];
+    const rawUrl = attr(tag, "href") ?? attr(tag, "src");
+    assert(
+      localTargetExists(file, rawUrl),
+      `${file}: broken local reference ${rawUrl}`
+    );
   }
 
   const menu = html.match(/<button\b[^>]*id=["']menu["'][^>]*>/i)?.[0];
