@@ -117,6 +117,27 @@
         <p class="admin-status" id="health-status" role="status"></p>
       </section>
 
+      <section class="admin-backups" id="backup-panel">
+        <div class="admin-panel-head">
+          <div>
+            <p class="eyebrow">Резервные копии</p>
+            <h2>Backup и экспорт</h2>
+          </div>
+          <div class="admin-panel-actions">
+            <button class="admin-ghost" id="backup-refresh-button" type="button">Обновить</button>
+            <button class="button" id="backup-create-button" type="button">Создать сейчас</button>
+          </div>
+        </div>
+
+        <p class="backup-note">
+          Автоматический снимок создаётся каждый день в 03:20 UTC. Хранятся последние 30 копий.
+          Ссылки на скачивание работают 5 минут.
+        </p>
+
+        <div class="backup-list" id="backup-list"></div>
+        <p class="admin-status" id="backup-status" role="status"></p>
+      </section>
+
       <section class="admin-analytics" id="analytics-panel">
         <div class="admin-panel-head">
           <div>
