@@ -278,6 +278,9 @@ function openEditProject(project) {
   document.querySelector("#project-sort-order").value = project.sort_order ?? 0;
   document.querySelector("#project-short-description").value = project.short_description || "";
   document.querySelector("#project-description").value = project.description || "";
+  document.querySelector("#project-task").value = project.task || "";
+  document.querySelector("#project-solution").value = project.solution || "";
+  document.querySelector("#project-result").value = project.result || "";
   document.querySelector("#project-published").checked = Boolean(project.published);
   currentCoverUrl = project.cover_url || null;
   coverRemoved = false;
@@ -363,7 +366,7 @@ async function loadProjects() {
 
   try {
     projects = await api(
-      "/rest/v1/projects?select=id,slug,title,short_description,description,type,status,cover_url,sort_order,published,created_at,updated_at&order=sort_order.asc,created_at.desc",
+      "/rest/v1/projects?select=id,slug,title,short_description,description,task,solution,result,type,status,cover_url,sort_order,published,created_at,updated_at&order=sort_order.asc,created_at.desc",
       { method: "GET" }
     );
 
@@ -495,6 +498,9 @@ projectForm.addEventListener("submit", async (event) => {
     sort_order: Number(document.querySelector("#project-sort-order").value || 0),
     short_description: document.querySelector("#project-short-description").value.trim() || null,
     description: document.querySelector("#project-description").value.trim() || null,
+    task: document.querySelector("#project-task").value.trim() || null,
+    solution: document.querySelector("#project-solution").value.trim() || null,
+    result: document.querySelector("#project-result").value.trim() || null,
     cover_url: coverRemoved ? null : currentCoverUrl,
     published: document.querySelector("#project-published").checked
   };
