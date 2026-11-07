@@ -1,5 +1,5 @@
-const STATIC_CACHE = "custom-tools-static-v1";
-const RUNTIME_CACHE = "custom-tools-runtime-v1";
+const STATIC_CACHE = "custom-tools-static-v2";
+const RUNTIME_CACHE = "custom-tools-runtime-v2";
 const APP_SCOPE = "/custom-tools-studio/";
 
 const STATIC_ASSETS = [
@@ -63,6 +63,25 @@ self.addEventListener("fetch", event => {
   }
 
   if (url.origin !== self.location.origin) return;
+
+  const isCodeAsset =
+    request.destination === "script" ||
+    request.destination === "style";
+
+  if (isCodeAsset) {
+    event.respondWith(
+      fetch(request)
+        .then(response => {
+          if (response?.ok) {
+            const copy = response.clone();
+            caches.open(RUNTIME_CACHE).then(cache => cache.put(request, copy));
+          }
+          return response;
+        })
+        .catch(() => caches.match(request))
+    );
+    return;
+  }
 
   event.respondWith(
     caches.match(request).then(cached => {
