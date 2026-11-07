@@ -9,6 +9,8 @@ const publicPages = [
   "identity.html",
   "contacts.html",
   "request.html",
+  "privacy.html",
+  "404.html",
   "project.html",
   "offline.html"
 ];
@@ -20,6 +22,8 @@ const requiredProdUrls = [
   "https://toolsforyourwork.github.io/custom-tools-studio/identity.html",
   "https://toolsforyourwork.github.io/custom-tools-studio/contacts.html",
   "https://toolsforyourwork.github.io/custom-tools-studio/request.html",
+  "https://toolsforyourwork.github.io/custom-tools-studio/privacy.html",
+  "https://toolsforyourwork.github.io/custom-tools-studio/404.html",
   "https://toolsforyourwork.github.io/custom-tools-studio/admin/",
   "https://toolsforyourwork.github.io/custom-tools-studio/styles.css",
   "https://toolsforyourwork.github.io/custom-tools-studio/script.js",
@@ -124,6 +128,11 @@ for (const file of publicPages) {
   }
 }
 
+const requestHtml = read("request.html");
+assert(/name=["']consent["']/i.test(requestHtml), "request.html: privacy consent missing");
+assert(requestHtml.includes("privacy.html"), "request.html: privacy link missing");
+assert(read("script.js").includes("consent: Boolean"), "script.js: consent is not sent to server");
+
 const adminHtml = read("admin/index.html");
 assert(/noindex/i.test(adminHtml), "admin/index.html: missing noindex");
 
@@ -189,6 +198,18 @@ if (process.env.QA_PRODUCTION === "1") {
     } catch (error) {
       errors.push(`production: ${url}: ${error.message}`);
     }
+  }
+
+  try {
+    const missing = await fetch(
+      "https://toolsforyourwork.github.io/custom-tools-studio/missing-route-for-qa",
+      { redirect: "manual", headers: { "user-agent": "custom-tools-production-qa" } }
+    );
+    const missingBody = await missing.text();
+    assert(missing.status === 404, `production 404 returned HTTP ${missing.status}`);
+    assert(missingBody.includes("Здесь ничего нет."), "production 404 page content missing");
+  } catch (error) {
+    errors.push(`production 404: ${error.message}`);
   }
 
   try {
