@@ -266,7 +266,7 @@ async function loadProjects() {
 
     empty.style.display = "none";
     grid.innerHTML = projects.map(project => `
-      <a class="project project-link reveal" href="project.html?slug=${encodeURIComponent(project.slug)}" aria-label="Открыть кейс: ${project.title}">
+      <a class="project project-link reveal" href="case/${encodeURIComponent(project.slug)}/" aria-label="Открыть кейс: ${project.title}">
         <div class="project__visual" ${project.cover_url ? `style="background-image:url('${project.cover_url}');background-size:cover;background-position:center"` : ""}>
           ${project.cover_url ? "" : '<div class="project__dot"></div>'}
         </div>
