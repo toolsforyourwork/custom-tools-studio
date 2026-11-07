@@ -40,6 +40,7 @@ let pendingCoverFile = null;
 let currentCoverUrl = null;
 let coverRemoved = false;
 let localCoverPreviewUrl = null;
+let currentProjectMedia = [];
 
 function setStatus(el, message, type = "") {
   el.textContent = message;
@@ -227,6 +228,241 @@ async function uploadCover(file, slug) {
   return `${SUPABASE_URL}/storage/v1/object/public/project-covers/${encodedPath}`;
 }
 
+function mediaFileKind(file) {
+  return file.type.startsWith("video/") ? "video" : "image";
+}
+
+function mediaExtension(file) {
+  const byMime = {
+    "image/jpeg": "jpg",
+    "image/png": "png",
+    "image/webp": "webp",
+    "image/avif": "avif",
+    "video/mp4": "mp4",
+    "video/webm": "webm"
+  };
+  return byMime[file.type] || "bin";
+}
+
+function mediaObjectPathFromUrl(url) {
+  const marker = "/storage/v1/object/public/project-media/";
+  const index = String(url || "").indexOf(marker);
+  if (index < 0) return null;
+  return decodeURIComponent(String(url).slice(index + marker.length));
+}
+
+async function uploadProjectMediaFile(file, projectId, slug, sortOrder) {
+  const allowed = [
+    "image/jpeg","image/png","image/webp","image/avif",
+    "video/mp4","video/webm"
+  ];
+
+  if (!allowed.includes(file.type)) {
+    throw new Error(`Формат файла «${file.name}» не поддерживается.`);
+  }
+
+  if (file.size > 50 * 1024 * 1024) {
+    throw new Error(`Файл «${file.name}» больше 50 МБ.`);
+  }
+
+  const kind = mediaFileKind(file);
+  const ext = mediaExtension(file);
+  const safeSlug = slugify(slug || "project") || "project";
+  const objectPath =
+    `media/${safeSlug}/${Date.now()}-${crypto.randomUUID().slice(0,8)}.${ext}`;
+  const encodedPath = objectPath.split("/").map(encodeURIComponent).join("/");
+
+  async function doUpload(retry = true) {
+    const response = await fetch(
+      `${SUPABASE_URL}/storage/v1/object/project-media/${encodedPath}`,
+      {
+        method: "POST",
+        headers: {
+          apikey: SUPABASE_KEY,
+          Authorization: `Bearer ${currentToken()}`,
+          "Content-Type": file.type,
+          "x-upsert": "false"
+        },
+        body: file
+      }
+    );
+
+    if (response.status === 401 && retry && await refreshSession()) {
+      return doUpload(false);
+    }
+
+    if (!response.ok) {
+      let message = `Storage error ${response.status}`;
+      try {
+        const data = await response.json();
+        message = data?.message || data?.error || message;
+      } catch {}
+      throw new Error(message);
+    }
+  }
+
+  await doUpload();
+
+  const url =
+    `${SUPABASE_URL}/storage/v1/object/public/project-media/${encodedPath}`;
+
+  await api("/rest/v1/project_media", {
+    method: "POST",
+    headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({
+      project_id: projectId,
+      kind,
+      url,
+      caption: null,
+      sort_order: sortOrder
+    })
+  });
+}
+
+async function loadProjectMedia(projectId) {
+  const list = document.querySelector("#media-admin-list");
+  const status = document.querySelector("#media-status");
+
+  if (!projectId) {
+    currentProjectMedia = [];
+    list.innerHTML = '<div class="media-admin-empty">Сохрани проект, чтобы добавить медиагалерею.</div>';
+    document.querySelector("#project-media-files").disabled = true;
+    document.querySelector("#upload-media-button").disabled = true;
+    setStatus(status, "");
+    return;
+  }
+
+  document.querySelector("#project-media-files").disabled = false;
+  document.querySelector("#upload-media-button").disabled = false;
+  setStatus(status, "Загружаю медиагалерею…");
+
+  try {
+    currentProjectMedia = await api(
+      `/rest/v1/project_media?select=id,project_id,kind,url,caption,sort_order,created_at&project_id=eq.${encodeURIComponent(projectId)}&order=sort_order.asc,created_at.asc`,
+      { method: "GET" }
+    );
+    renderProjectMedia();
+    setStatus(status, currentProjectMedia.length ? "" : "Медиа пока нет.");
+  } catch (error) {
+    setStatus(status, `Ошибка: ${error.message}`, "error");
+  }
+}
+
+function renderProjectMedia() {
+  const list = document.querySelector("#media-admin-list");
+  list.innerHTML = "";
+
+  if (!currentProjectMedia.length) {
+    list.innerHTML = '<div class="media-admin-empty">Медиа пока нет.</div>';
+    return;
+  }
+
+  for (const item of currentProjectMedia) {
+    const card = document.createElement("article");
+    card.className = "media-admin-card";
+
+    const preview = document.createElement("div");
+    preview.className = "media-admin-preview";
+
+    if (item.kind === "video") {
+      const video = document.createElement("video");
+      video.src = item.url;
+      video.controls = true;
+      video.preload = "metadata";
+      preview.appendChild(video);
+    } else {
+      const img = document.createElement("img");
+      img.src = item.url;
+      img.alt = item.caption || "Медиа проекта";
+      preview.appendChild(img);
+    }
+
+    const controls = document.createElement("div");
+    controls.className = "media-admin-controls";
+
+    const caption = document.createElement("input");
+    caption.type = "text";
+    caption.maxLength = 300;
+    caption.placeholder = "Подпись (необязательно)";
+    caption.value = item.caption || "";
+
+    const order = document.createElement("input");
+    order.type = "number";
+    order.step = "1";
+    order.value = item.sort_order ?? 0;
+    order.title = "Порядок";
+
+    const save = document.createElement("button");
+    save.type = "button";
+    save.className = "admin-mini";
+    save.textContent = "Сохранить";
+    save.addEventListener("click", async () => {
+      const status = document.querySelector("#media-status");
+      setStatus(status, "Сохраняю медиа…");
+      try {
+        await api(
+          `/rest/v1/project_media?id=eq.${encodeURIComponent(item.id)}`,
+          {
+            method: "PATCH",
+            headers: { Prefer: "return=minimal" },
+            body: JSON.stringify({
+              caption: caption.value.trim() || null,
+              sort_order: Number(order.value || 0)
+            })
+          }
+        );
+        await loadProjectMedia(item.project_id);
+        setStatus(status, "Медиа обновлено.", "success");
+      } catch (error) {
+        setStatus(status, `Ошибка: ${error.message}`, "error");
+      }
+    });
+
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "admin-mini is-danger";
+    remove.textContent = "Удалить";
+    remove.addEventListener("click", async () => {
+      if (!window.confirm("Удалить этот медиафайл из кейса?")) return;
+      const status = document.querySelector("#media-status");
+      setStatus(status, "Удаляю медиа…");
+
+      try {
+        await api(
+          `/rest/v1/project_media?id=eq.${encodeURIComponent(item.id)}`,
+          { method: "DELETE", headers: { Prefer: "return=minimal" } }
+        );
+
+        const objectPath = mediaObjectPathFromUrl(item.url);
+        if (objectPath) {
+          const encodedPath = objectPath.split("/").map(encodeURIComponent).join("/");
+          try {
+            await fetch(
+              `${SUPABASE_URL}/storage/v1/object/project-media/${encodedPath}`,
+              {
+                method: "DELETE",
+                headers: {
+                  apikey: SUPABASE_KEY,
+                  Authorization: `Bearer ${currentToken()}`
+                }
+              }
+            );
+          } catch {}
+        }
+
+        await loadProjectMedia(item.project_id);
+        setStatus(status, "Медиа удалено.", "success");
+      } catch (error) {
+        setStatus(status, `Ошибка: ${error.message}`, "error");
+      }
+    });
+
+    controls.append(caption, order, save, remove);
+    card.append(preview, controls);
+    list.appendChild(card);
+  }
+}
+
 function slugify(value) {
   const map = {
     а:"a",б:"b",в:"v",г:"g",д:"d",е:"e",ё:"e",ж:"zh",з:"z",и:"i",й:"y",
@@ -259,6 +495,9 @@ function resetEditor() {
   coverRemoved = false;
   revokeLocalCoverPreview();
   setCoverPreview(null);
+  currentProjectMedia = [];
+  document.querySelector("#project-media-files").value = "";
+  loadProjectMedia(null);
   setStatus(editorStatus, "");
 }
 
@@ -286,6 +525,7 @@ function openEditProject(project) {
   coverRemoved = false;
   pendingCoverFile = null;
   setCoverPreview(currentCoverUrl);
+  loadProjectMedia(project.id);
 
   editorEyebrow.textContent = "Редактирование";
   editorTitle.textContent = project.title || "Проект";
@@ -530,19 +770,28 @@ projectForm.addEventListener("submit", async (event) => {
       );
       setStatus(editorStatus, "Изменения сохранены.", "success");
     } else {
-      await api(
+      const created = await api(
         "/rest/v1/projects",
         {
           method: "POST",
-          headers: { Prefer: "return=minimal" },
+          headers: { Prefer: "return=representation" },
           body: JSON.stringify(payload)
         }
       );
-      setStatus(editorStatus, "Проект создан.", "success");
+
+      const createdProject = Array.isArray(created) ? created[0] : null;
+      if (createdProject?.id) {
+        document.querySelector("#project-id").value = createdProject.id;
+        editorEyebrow.textContent = "Редактирование";
+        editorTitle.textContent = createdProject.title || title;
+        slugWasEdited = true;
+        await loadProjectMedia(createdProject.id);
+      }
+
+      setStatus(editorStatus, "Проект создан. Теперь можно добавить медиагалерею.", "success");
     }
 
     await loadProjects();
-    setTimeout(closeEditor, 450);
   } catch (error) {
     const message = String(error.message || "");
     if (message.includes("duplicate") || message.includes("projects_slug_key")) {
@@ -588,6 +837,46 @@ document.querySelector("#project-cover-file").addEventListener("change", (event)
   coverRemoved = false;
   setCoverPreview(localCoverPreviewUrl);
   setStatus(editorStatus, `Выбрано: ${file.name}`);
+});
+
+document.querySelector("#upload-media-button").addEventListener("click", async () => {
+  const projectId = document.querySelector("#project-id").value;
+  const files = Array.from(document.querySelector("#project-media-files").files || []);
+  const status = document.querySelector("#media-status");
+
+  if (!projectId) {
+    setStatus(status, "Сначала сохрани проект.", "error");
+    return;
+  }
+
+  if (!files.length) {
+    setStatus(status, "Сначала выбери изображения или видео.");
+    return;
+  }
+
+  const button = document.querySelector("#upload-media-button");
+  button.disabled = true;
+
+  try {
+    const slug = document.querySelector("#project-slug").value.trim();
+    let order = currentProjectMedia.length
+      ? Math.max(...currentProjectMedia.map(item => Number(item.sort_order || 0))) + 10
+      : 0;
+
+    for (let i = 0; i < files.length; i++) {
+      setStatus(status, `Загружаю ${i + 1} из ${files.length}: ${files[i].name}`);
+      await uploadProjectMediaFile(files[i], projectId, slug, order);
+      order += 10;
+    }
+
+    document.querySelector("#project-media-files").value = "";
+    await loadProjectMedia(projectId);
+    setStatus(status, "Медиа загружено.", "success");
+  } catch (error) {
+    setStatus(status, `Ошибка: ${error.message}`, "error");
+  } finally {
+    button.disabled = false;
+  }
 });
 
 document.querySelector("#remove-cover").addEventListener("click", () => {
