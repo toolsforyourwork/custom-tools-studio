@@ -710,6 +710,132 @@ async function loadHealth() {
   }
 }
 
+async function backupApi(body, retry = true) {
+  const response = await fetch(`${SUPABASE_URL}/functions/v1/backup-data`, {
+    method: "POST",
+    headers: {
+      apikey: SUPABASE_KEY,
+      Authorization: `Bearer ${currentToken()}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(body)
+  });
+
+  if (response.status === 401 && retry && await refreshSession()) {
+    return backupApi(body, false);
+  }
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok || !data?.ok) {
+    throw new Error(data?.error || `HTTP ${response.status}`);
+  }
+
+  return data;
+}
+
+function formatBytes(bytes) {
+  const value = Number(bytes || 0);
+  if (!value) return "—";
+  if (value < 1024) return `${value} Б`;
+  if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} КБ`;
+  return `${(value / 1024 / 1024).toFixed(1)} МБ`;
+}
+
+function renderBackups(backups) {
+  const list = document.querySelector("#backup-list");
+  list.innerHTML = "";
+
+  if (!backups?.length) {
+    const empty = document.createElement("div");
+    empty.className = "backup-empty";
+    empty.textContent = "Резервных копий пока нет.";
+    list.appendChild(empty);
+    return;
+  }
+
+  for (const backup of backups) {
+    const row = document.createElement("article");
+    row.className = "backup-row";
+
+    const main = document.createElement("div");
+    main.className = "backup-row__main";
+
+    const title = document.createElement("strong");
+    title.textContent = new Date(backup.created_at || backup.updated_at).toLocaleString("ru-RU");
+
+    const meta = document.createElement("span");
+    meta.textContent = `${formatBytes(backup.size_bytes)} · JSON`;
+
+    main.append(title, meta);
+
+    const download = document.createElement("button");
+    download.type = "button";
+    download.className = "admin-mini";
+    download.textContent = "Скачать";
+    download.addEventListener("click", async () => {
+      const status = document.querySelector("#backup-status");
+      download.disabled = true;
+      setStatus(status, "Готовлю защищённую ссылку…");
+
+      try {
+        const data = await backupApi({
+          action: "download",
+          name: backup.name
+        });
+
+        window.location.href = data.signed_url;
+        setStatus(status, "Ссылка создана. Скачивание началось.", "success");
+      } catch (error) {
+        setStatus(status, `Ошибка скачивания: ${error.message}`, "error");
+      } finally {
+        download.disabled = false;
+      }
+    });
+
+    row.append(main, download);
+    list.appendChild(row);
+  }
+}
+
+async function loadBackups() {
+  const status = document.querySelector("#backup-status");
+  setStatus(status, "Загружаю список резервных копий…");
+
+  try {
+    const data = await backupApi({ action: "list" });
+    renderBackups(data.backups || []);
+    setStatus(
+      status,
+      data.backups?.length
+        ? `Копий: ${data.backups.length}`
+        : "Резервных копий пока нет.",
+      data.backups?.length ? "success" : ""
+    );
+  } catch (error) {
+    setStatus(status, `Ошибка backup: ${error.message}`, "error");
+  }
+}
+
+async function createBackupNow() {
+  const status = document.querySelector("#backup-status");
+  const button = document.querySelector("#backup-create-button");
+
+  button.disabled = true;
+  setStatus(status, "Создаю резервную копию…");
+
+  try {
+    const data = await backupApi({ action: "create", source: "admin" });
+    const size = formatBytes(data.backup?.size_bytes);
+    setStatus(status, `Backup создан · ${size}`, "success");
+    await loadBackups();
+  } catch (error) {
+    setStatus(status, `Ошибка backup: ${error.message}`, "error");
+  } finally {
+    button.disabled = false;
+  }
+}
+
 function friendlyPage(path) {
   const map = {
     "/custom-tools-studio/": "Главная",
@@ -948,6 +1074,7 @@ async function showDashboard() {
   await loadProjects();
   await loadAnalytics(analyticsDays);
   await loadHealth();
+  await loadBackups();
 }
 
 loginForm.addEventListener("submit", async (event) => {
@@ -1149,9 +1276,12 @@ refreshButton.addEventListener("click", async () => {
   await loadProjects();
   await loadAnalytics(analyticsDays);
   await loadHealth();
+  await loadBackups();
 });
 
 document.querySelector("#health-refresh-button")?.addEventListener("click", loadHealth);
+document.querySelector("#backup-refresh-button")?.addEventListener("click", loadBackups);
+document.querySelector("#backup-create-button")?.addEventListener("click", createBackupNow);
 
 document.querySelectorAll("[data-analytics-days]").forEach(button => {
   button.addEventListener("click", () => {
