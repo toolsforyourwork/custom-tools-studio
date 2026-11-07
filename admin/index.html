@@ -166,6 +166,31 @@
             </div>
           </div>
 
+          <section class="media-field" id="project-media-panel">
+            <div class="media-field__head">
+              <div>
+                <span class="cover-label">Медиагалерея</span>
+                <small>Изображения до 50 МБ и видео MP4/WebM до 50 МБ. Для нового проекта сначала сохрани карточку.</small>
+              </div>
+            </div>
+
+            <div class="media-upload-row">
+              <label class="admin-ghost media-upload-button">
+                <span>Выбрать медиа</span>
+                <input
+                  id="project-media-files"
+                  type="file"
+                  multiple
+                  accept="image/jpeg,image/png,image/webp,image/avif,video/mp4,video/webm"
+                >
+              </label>
+              <button class="admin-ghost" id="upload-media-button" type="button">Загрузить выбранное</button>
+            </div>
+
+            <p class="admin-status media-status" id="media-status" role="status"></p>
+            <div class="media-admin-list" id="media-admin-list"></div>
+          </section>
+
           <label class="publish-toggle">
             <input id="project-published" type="checkbox">
             <span>
