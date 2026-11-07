@@ -19,7 +19,7 @@
       </div>
       <p class="eyebrow">Закрытая зона</p>
       <h1>Админка проектов</h1>
-      <p class="admin-lead">Войди под аккаунтом администратора. Публичной регистрации здесь нет.</p>
+      <p class="admin-lead">Управление проектами студии. Публичной регистрации здесь нет.</p>
 
       <form id="login-form" class="admin-form">
         <label>
@@ -44,34 +44,118 @@
           <h1>Проекты</h1>
           <p class="admin-user" id="admin-user"></p>
         </div>
-        <button class="admin-ghost" id="logout-button" type="button">Выйти</button>
+        <div class="admin-top-actions">
+          <a class="admin-ghost" href="../projects.html" target="_blank" rel="noopener">Открыть сайт</a>
+          <button class="admin-ghost" id="logout-button" type="button">Выйти</button>
+        </div>
       </header>
 
       <div class="admin-summary">
         <div class="admin-summary-card">
           <strong id="projects-count">—</strong>
-          <span>проектов в базе</span>
+          <span>всего проектов</span>
         </div>
         <div class="admin-summary-card">
-          <strong>✓</strong>
-          <span>доступ администратора подтверждён</span>
+          <strong id="published-count">—</strong>
+          <span>опубликовано</span>
+        </div>
+        <div class="admin-summary-card">
+          <strong id="draft-count">—</strong>
+          <span>черновиков</span>
         </div>
       </div>
+
+      <section class="admin-editor is-hidden" id="editor-panel">
+        <div class="admin-panel-head">
+          <div>
+            <p class="eyebrow" id="editor-eyebrow">Новый проект</p>
+            <h2 id="editor-title">Добавить проект</h2>
+          </div>
+          <button class="admin-ghost" id="cancel-edit" type="button">Закрыть</button>
+        </div>
+
+        <form id="project-form" class="project-form">
+          <input id="project-id" type="hidden">
+
+          <div class="form-grid form-grid-two">
+            <label>
+              <span>Название *</span>
+              <input id="project-title" type="text" maxlength="160" required placeholder="Например, AI-пайплайн для студии">
+            </label>
+            <label>
+              <span>Slug *</span>
+              <input id="project-slug" type="text" maxlength="160" required placeholder="ai-pipeline">
+            </label>
+          </div>
+
+          <div class="form-grid form-grid-three">
+            <label>
+              <span>Тип</span>
+              <input id="project-type" type="text" maxlength="100" placeholder="Автоматизация / Web / AI">
+            </label>
+            <label>
+              <span>Статус</span>
+              <select id="project-status">
+                <option value="concept">Концепт</option>
+                <option value="in_progress" selected>В работе</option>
+                <option value="paused">Пауза</option>
+                <option value="completed">Готов</option>
+              </select>
+            </label>
+            <label>
+              <span>Порядок</span>
+              <input id="project-sort-order" type="number" value="0" step="1">
+            </label>
+          </div>
+
+          <label>
+            <span>Короткое описание</span>
+            <textarea id="project-short-description" rows="3" maxlength="600" placeholder="Пара предложений для карточки проекта"></textarea>
+          </label>
+
+          <label>
+            <span>Полное описание</span>
+            <textarea id="project-description" rows="7" maxlength="12000" placeholder="Задача, решение, процесс, результат"></textarea>
+          </label>
+
+          <label>
+            <span>Ссылка на обложку</span>
+            <input id="project-cover-url" type="url" maxlength="2000" placeholder="https://...">
+            <small>На следующем этапе заменим это поле на загрузку файла прямо из админки.</small>
+          </label>
+
+          <label class="publish-toggle">
+            <input id="project-published" type="checkbox">
+            <span>
+              <strong>Опубликовать</strong>
+              <small>Проект сразу появится на публичной странице.</small>
+            </span>
+          </label>
+
+          <div class="editor-actions">
+            <button class="button" id="save-project" type="submit">Сохранить проект</button>
+            <button class="admin-ghost" id="cancel-edit-bottom" type="button">Отмена</button>
+          </div>
+
+          <p class="admin-status" id="editor-status" role="status"></p>
+        </form>
+      </section>
 
       <section class="admin-panel">
         <div class="admin-panel-head">
           <div>
-            <p class="eyebrow">Проверка подключения</p>
-            <h2>Проекты из Supabase</h2>
+            <p class="eyebrow">База проектов</p>
+            <h2>Все проекты</h2>
           </div>
-          <button class="admin-ghost" id="refresh-button" type="button">Обновить</button>
+          <div class="admin-panel-actions">
+            <button class="admin-ghost" id="refresh-button" type="button">Обновить</button>
+            <button class="button" id="new-project-button" type="button">+ Новый проект</button>
+          </div>
         </div>
 
         <div id="projects-list" class="admin-projects"></div>
         <p class="admin-status" id="dashboard-status" role="status"></p>
       </section>
-
-      <p class="admin-next">На следующем этапе здесь появятся создание, редактирование, публикация и удаление проектов.</p>
     </section>
   </main>
 
