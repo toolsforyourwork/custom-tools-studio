@@ -1,5 +1,5 @@
-const STATIC_CACHE = "custom-tools-static-v3";
-const RUNTIME_CACHE = "custom-tools-runtime-v3";
+const STATIC_CACHE = "custom-tools-static-v4";
+const RUNTIME_CACHE = "custom-tools-runtime-v4";
 const APP_SCOPE = "/custom-tools-studio/";
 
 const STATIC_ASSETS = [
@@ -10,6 +10,8 @@ const STATIC_ASSETS = [
   APP_SCOPE + "identity.html",
   APP_SCOPE + "contacts.html",
   APP_SCOPE + "request.html",
+  APP_SCOPE + "privacy.html",
+  APP_SCOPE + "404.html",
   APP_SCOPE + "offline.html",
   APP_SCOPE + "styles.css",
   APP_SCOPE + "script.js",
