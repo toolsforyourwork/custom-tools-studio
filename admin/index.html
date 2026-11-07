@@ -65,6 +65,63 @@
         </div>
       </div>
 
+      <section class="admin-analytics" id="analytics-panel">
+        <div class="admin-panel-head">
+          <div>
+            <p class="eyebrow">Аналитика</p>
+            <h2>Что происходит на сайте</h2>
+          </div>
+          <div class="analytics-range">
+            <button class="admin-mini is-active" type="button" data-analytics-days="7">7 дней</button>
+            <button class="admin-mini" type="button" data-analytics-days="30">30 дней</button>
+          </div>
+        </div>
+
+        <div class="analytics-metrics">
+          <div class="analytics-metric">
+            <strong id="analytics-pageviews">—</strong>
+            <span>просмотров страниц</span>
+          </div>
+          <div class="analytics-metric">
+            <strong id="analytics-sessions">—</strong>
+            <span>уникальных сессий</span>
+          </div>
+          <div class="analytics-metric">
+            <strong id="analytics-projectviews">—</strong>
+            <span>открытий кейсов</span>
+          </div>
+          <div class="analytics-metric">
+            <strong id="analytics-requestviews">—</strong>
+            <span>просмотров формы</span>
+          </div>
+          <div class="analytics-metric">
+            <strong id="analytics-submissions">—</strong>
+            <span>успешных заявок</span>
+          </div>
+          <div class="analytics-metric">
+            <strong id="analytics-conversion">—</strong>
+            <span>конверсия формы</span>
+          </div>
+        </div>
+
+        <div class="analytics-columns">
+          <div class="analytics-list-card">
+            <h3>Популярные страницы</h3>
+            <div class="analytics-list" id="analytics-pages"></div>
+          </div>
+          <div class="analytics-list-card">
+            <h3>Популярные кейсы</h3>
+            <div class="analytics-list" id="analytics-project-list"></div>
+          </div>
+          <div class="analytics-list-card">
+            <h3>Источники трафика</h3>
+            <div class="analytics-list" id="analytics-sources"></div>
+          </div>
+        </div>
+
+        <p class="admin-status" id="analytics-status" role="status"></p>
+      </section>
+
       <section class="admin-editor is-hidden" id="editor-panel">
         <div class="admin-panel-head">
           <div>
