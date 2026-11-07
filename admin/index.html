@@ -114,9 +114,33 @@
           </label>
 
           <label>
-            <span>Полное описание</span>
-            <textarea id="project-description" rows="7" maxlength="12000" placeholder="Задача, решение, процесс, результат"></textarea>
+            <span>Вводный текст кейса</span>
+            <textarea id="project-description" rows="5" maxlength="12000" placeholder="Контекст проекта: что это за задача и почему она появилась"></textarea>
           </label>
+
+          <div class="case-fields">
+            <div class="case-fields__head">
+              <div>
+                <span class="cover-label">Структура кейса</span>
+                <small>Пустые блоки на публичной странице автоматически скрываются.</small>
+              </div>
+            </div>
+
+            <label>
+              <span>01 — Задача</span>
+              <textarea id="project-task" rows="5" maxlength="12000" placeholder="Что нужно было решить, какие были ограничения и исходная ситуация"></textarea>
+            </label>
+
+            <label>
+              <span>02 — Решение</span>
+              <textarea id="project-solution" rows="6" maxlength="16000" placeholder="Что именно сделали, как устроен инструмент или процесс"></textarea>
+            </label>
+
+            <label>
+              <span>03 — Результат</span>
+              <textarea id="project-result" rows="5" maxlength="12000" placeholder="Что изменилось после внедрения и какой эффект получил клиент"></textarea>
+            </label>
+          </div>
 
           <div class="cover-field">
             <div>
