@@ -65,6 +65,58 @@
         </div>
       </div>
 
+      <section class="admin-health" id="health-panel">
+        <div class="admin-panel-head">
+          <div>
+            <p class="eyebrow">Мониторинг</p>
+            <h2>Состояние системы</h2>
+          </div>
+          <button class="admin-ghost" id="health-refresh-button" type="button">Проверить сейчас</button>
+        </div>
+
+        <div class="health-overall">
+          <span class="health-dot is-loading" id="health-overall-dot"></span>
+          <strong id="health-overall-text">Проверяем…</strong>
+          <span id="health-checked-at"></span>
+        </div>
+
+        <div class="health-grid">
+          <article class="health-card is-loading" id="health-site">
+            <div class="health-card__head">
+              <span class="health-dot"></span>
+              <strong>Сайт</strong>
+            </div>
+            <span class="health-card__value">—</span>
+          </article>
+
+          <article class="health-card is-loading" id="health-database">
+            <div class="health-card__head">
+              <span class="health-dot"></span>
+              <strong>Supabase</strong>
+            </div>
+            <span class="health-card__value">—</span>
+          </article>
+
+          <article class="health-card is-loading" id="health-form">
+            <div class="health-card__head">
+              <span class="health-dot"></span>
+              <strong>Форма заявки</strong>
+            </div>
+            <span class="health-card__value">—</span>
+          </article>
+
+          <article class="health-card is-loading" id="health-telegram">
+            <div class="health-card__head">
+              <span class="health-dot"></span>
+              <strong>Telegram</strong>
+            </div>
+            <span class="health-card__value">—</span>
+          </article>
+        </div>
+
+        <p class="admin-status" id="health-status" role="status"></p>
+      </section>
+
       <section class="admin-analytics" id="analytics-panel">
         <div class="admin-panel-head">
           <div>
