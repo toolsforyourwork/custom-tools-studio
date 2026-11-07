@@ -261,8 +261,16 @@ async function uploadProjectMediaFile(file, projectId, slug, sortOrder) {
     throw new Error(`Формат файла «${file.name}» не поддерживается.`);
   }
 
-  if (file.size > 50 * 1024 * 1024) {
-    throw new Error(`Файл «${file.name}» больше 50 МБ.`);
+  const maxSize = file.type.startsWith("video/")
+    ? 50 * 1024 * 1024
+    : 100 * 1024 * 1024;
+
+  if (file.size > maxSize) {
+    throw new Error(
+      file.type.startsWith("video/")
+        ? `Видео «${file.name}» больше 50 МБ.`
+        : `Изображение «${file.name}» больше 100 МБ.`
+    );
   }
 
   const kind = mediaFileKind(file);
