@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Админка — Tools for your work</title>
+  <meta name="robots" content="noindex,nofollow">
+  <link rel="icon" type="image/svg+xml" href="../favicon.svg">
+  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="admin.css">
+</head>
+<body>
+  <main class="admin-shell">
+    <section class="admin-card" id="login-view">
+      <div class="admin-mark" aria-hidden="true">
+        <span class="admin-dot admin-dot-yellow"></span>
+        <span class="admin-line"></span>
+        <span class="admin-dot admin-dot-blue"></span>
+      </div>
+      <p class="eyebrow">Закрытая зона</p>
+      <h1>Админка проектов</h1>
+      <p class="admin-lead">Войди под аккаунтом администратора. Публичной регистрации здесь нет.</p>
+
+      <form id="login-form" class="admin-form">
+        <label>
+          <span>Email</span>
+          <input id="email" type="email" autocomplete="username" required>
+        </label>
+        <label>
+          <span>Пароль</span>
+          <input id="password" type="password" autocomplete="current-password" required minlength="10">
+        </label>
+        <button class="button admin-submit" type="submit">Войти</button>
+      </form>
+
+      <p class="admin-status" id="login-status" role="status"></p>
+      <a class="admin-back" href="../index.html">← На сайт</a>
+    </section>
+
+    <section class="admin-dashboard is-hidden" id="dashboard-view">
+      <header class="admin-topbar">
+        <div>
+          <p class="eyebrow">Панель управления</p>
+          <h1>Проекты</h1>
+          <p class="admin-user" id="admin-user"></p>
+        </div>
+        <button class="admin-ghost" id="logout-button" type="button">Выйти</button>
+      </header>
+
+      <div class="admin-summary">
+        <div class="admin-summary-card">
+          <strong id="projects-count">—</strong>
+          <span>проектов в базе</span>
+        </div>
+        <div class="admin-summary-card">
+          <strong>✓</strong>
+          <span>доступ администратора подтверждён</span>
+        </div>
+      </div>
+
+      <section class="admin-panel">
+        <div class="admin-panel-head">
+          <div>
+            <p class="eyebrow">Проверка подключения</p>
+            <h2>Проекты из Supabase</h2>
+          </div>
+          <button class="admin-ghost" id="refresh-button" type="button">Обновить</button>
+        </div>
+
+        <div id="projects-list" class="admin-projects"></div>
+        <p class="admin-status" id="dashboard-status" role="status"></p>
+      </section>
+
+      <p class="admin-next">На следующем этапе здесь появятся создание, редактирование, публикация и удаление проектов.</p>
+    </section>
+  </main>
+
+  <script src="admin.js"></script>
+</body>
+</html>
