@@ -83,9 +83,13 @@
               <input name="website" tabindex="-1" autocomplete="off">
             </label>
           </div>
-          <input class="field" name="name" placeholder="Имя" required>
-          <input class="field" name="contact" placeholder="Telegram / email / Instagram" required>
-          <textarea class="field" name="message" placeholder="Что хочется упростить или собрать?" required></textarea>
+          <input class="field" name="name" placeholder="Имя" aria-label="Имя" autocomplete="name" required>
+          <input class="field" name="contact" placeholder="Telegram / email / Instagram" aria-label="Контакт для ответа" autocomplete="off" required>
+          <textarea class="field" name="message" placeholder="Что хочется упростить или собрать?" aria-label="Описание задачи" required></textarea>
+          <label class="consent">
+            <input type="checkbox" name="consent" value="yes" required>
+            <span>Я согласен на обработку данных для ответа на заявку и ознакомился с <a href="privacy.html" target="_blank" rel="noopener">описанием обработки данных</a>.</span>
+          </label>
           <button class="btn primary" type="submit">Отправить заявку</button>
           <div class="form-status"></div>
         </form>
@@ -97,7 +101,7 @@
 <footer class="footer">
   <div class="container footer__inner">
     <span>Студия кастомных цифровых инструментов</span>
-    <span data-year></span>
+    <div class="footer__meta"><a href="privacy.html">Обработка данных</a><span data-year></span></div>
   </div>
 </footer>
 <script src="script.js"></script>
