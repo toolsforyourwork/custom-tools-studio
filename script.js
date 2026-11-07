@@ -38,6 +38,88 @@ document.querySelectorAll(".reveal").forEach(el=>revealObserver.observe(el));
 const SUPABASE_URL = "https://bpdqosfgxqawbzljafgb.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_FQaK_TPRAjA1NMcVG9zqzw_VFvqaRXk";
 
+const ANALYTICS_SESSION_KEY = "custom_tools_analytics_session";
+const ANALYTICS_ATTRIBUTION_KEY = "custom_tools_analytics_attribution";
+
+function getAnalyticsSessionId() {
+  try {
+    let id = sessionStorage.getItem(ANALYTICS_SESSION_KEY);
+    if (!id) {
+      id = crypto.randomUUID();
+      sessionStorage.setItem(ANALYTICS_SESSION_KEY, id);
+    }
+    return id;
+  } catch {
+    return crypto.randomUUID();
+  }
+}
+
+function getAnalyticsAttribution() {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const current = {
+      referrer: document.referrer || "",
+      utm_source: params.get("utm_source") || "",
+      utm_medium: params.get("utm_medium") || "",
+      utm_campaign: params.get("utm_campaign") || ""
+    };
+
+    const hasCurrentAttribution =
+      current.utm_source || current.utm_medium || current.utm_campaign;
+
+    const savedRaw = sessionStorage.getItem(ANALYTICS_ATTRIBUTION_KEY);
+    const saved = savedRaw ? JSON.parse(savedRaw) : null;
+
+    if (!saved || hasCurrentAttribution) {
+      const next = {
+        referrer: current.referrer || saved?.referrer || "",
+        utm_source: current.utm_source || "",
+        utm_medium: current.utm_medium || "",
+        utm_campaign: current.utm_campaign || ""
+      };
+      sessionStorage.setItem(ANALYTICS_ATTRIBUTION_KEY, JSON.stringify(next));
+      return next;
+    }
+
+    return saved;
+  } catch {
+    return {
+      referrer: document.referrer || "",
+      utm_source: "",
+      utm_medium: "",
+      utm_campaign: ""
+    };
+  }
+}
+
+function trackSiteEvent(eventName, extra = {}) {
+  const attribution = getAnalyticsAttribution();
+
+  const payload = {
+    event_name: eventName,
+    session_id: getAnalyticsSessionId(),
+    path: window.location.pathname,
+    referrer: attribution.referrer,
+    utm_source: attribution.utm_source,
+    utm_medium: attribution.utm_medium,
+    utm_campaign: attribution.utm_campaign,
+    ...extra
+  };
+
+  fetch(`${SUPABASE_URL}/functions/v1/track-event`, {
+    method: "POST",
+    headers: {
+      apikey: SUPABASE_PUBLISHABLE_KEY,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(payload),
+    keepalive: true
+  }).catch(() => {});
+}
+
+window.trackSiteEvent = trackSiteEvent;
+
+
 const PROJECT_STATUS_LABELS = {
   concept: "Концепт",
   in_progress: "В работе",
@@ -70,6 +152,22 @@ document.querySelectorAll("[data-resource]").forEach(link => {
     link.rel = "noopener noreferrer";
   }
   if (value) value.textContent = resource.label || resource.url;
+
+  link.addEventListener("click", () => {
+    trackSiteEvent("resource_click", { event_value: key });
+  });
+});
+
+trackSiteEvent("page_view");
+
+if (window.location.pathname.endsWith("/request.html")) {
+  trackSiteEvent("request_view");
+}
+
+document.querySelectorAll('a[href$="request.html"]').forEach(link => {
+  link.addEventListener("click", () => {
+    trackSiteEvent("request_click");
+  });
 });
 
 async function supabaseRequest(path, options = {}) {
@@ -137,6 +235,7 @@ document.querySelectorAll("form.demo-form").forEach(form=>{
 
       form.reset();
       status.textContent = "Готово. Заявка отправлена.";
+      trackSiteEvent("request_submit_success");
     } catch (error) {
       console.error(error);
       status.textContent = error.message === "rate_limited"
