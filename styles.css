@@ -632,3 +632,6 @@ textarea.field{min-height:160px;resize:vertical}
   }
   .case-cta{margin:62px 0 72px}
 }
+
+
+.is-hidden{display:none!important}
