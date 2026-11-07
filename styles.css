@@ -703,3 +703,19 @@ textarea.field{min-height:160px;resize:vertical}
   opacity:0!important;
   pointer-events:none!important;
 }
+
+
+:where(a, button, input, textarea, select):focus-visible {
+  outline: 3px solid var(--blue);
+  outline-offset: 3px;
+}
+
+.menu {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+.btn,
+.nav a {
+  min-height: 44px;
+}
