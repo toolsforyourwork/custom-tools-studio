@@ -46,6 +46,32 @@ let originalCoverStoragePath = null;
 let coverRemoved = false;
 let localCoverPreviewUrl = null;
 let currentProjectMedia = [];
+let currentCollabProjectId = null;
+let currentProjectWorkspace = {
+  messages: [],
+  files: [],
+  approvals: []
+};
+
+function formatWorkspaceDate(value) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleString("ru-RU", {
+    day: "2-digit",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+}
+
+function formatWorkspaceBytes(value) {
+  const bytes = Number(value || 0);
+  if (!bytes) return "—";
+  if (bytes < 1024) return `${bytes} Б`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} КБ`;
+  return `${(bytes / 1024 / 1024).toFixed(1)} МБ`;
+}
 
 function setStatus(el, message, type = "") {
   el.textContent = message;
@@ -394,6 +420,269 @@ async function uploadProjectMediaFile(file, projectId, slug, sortOrder) {
   }
 }
 
+async function uploadSignedWorkspaceFile(prepared, file) {
+  const formData = new FormData();
+  formData.append("cacheControl", "0");
+  formData.append("", file);
+
+  const response = await fetch(prepared.upload.signed_url, {
+    method: "PUT",
+    headers: { "x-upsert": "false" },
+    body: formData
+  });
+
+  if (!response.ok) {
+    throw new Error(`Storage HTTP ${response.status}`);
+  }
+}
+
+function renderProjectMessages() {
+  const root = document.querySelector("#admin-project-messages");
+  root.replaceChildren();
+
+  const messages = currentProjectWorkspace.messages || [];
+
+  if (!messages.length) {
+    const empty = document.createElement("div");
+    empty.className = "collab-empty";
+    empty.textContent = "Сообщений пока нет.";
+    root.appendChild(empty);
+    return;
+  }
+
+  for (const message of messages) {
+    const item = document.createElement("article");
+    item.className =
+      "collab-message " +
+      (message.author_role === "admin" ? "is-admin" : "is-client");
+
+    const head = document.createElement("div");
+    head.className = "collab-message__head";
+
+    const author = document.createElement("strong");
+    author.textContent = message.author_role === "admin" ? "Вы" : "Клиент";
+
+    const date = document.createElement("span");
+    date.textContent = formatWorkspaceDate(message.created_at);
+
+    const text = document.createElement("p");
+    text.textContent = message.body;
+
+    head.append(author, date);
+    item.append(head, text);
+    root.appendChild(item);
+  }
+
+  root.scrollTop = root.scrollHeight;
+}
+
+function renderProjectFiles() {
+  const root = document.querySelector("#admin-project-files");
+  root.replaceChildren();
+
+  const files = currentProjectWorkspace.files || [];
+
+  if (!files.length) {
+    const empty = document.createElement("div");
+    empty.className = "collab-empty";
+    empty.textContent = "Приватных файлов пока нет.";
+    root.appendChild(empty);
+    return;
+  }
+
+  for (const file of files) {
+    const row = document.createElement("article");
+    row.className = "collab-file-row";
+
+    const info = document.createElement("div");
+    info.className = "collab-file-info";
+
+    const name = document.createElement("strong");
+    name.textContent = file.file_name;
+
+    const meta = document.createElement("span");
+    meta.textContent =
+      `${file.uploaded_by_role === "admin" ? "От студии" : "От клиента"} · ` +
+      `${formatWorkspaceBytes(file.size_bytes)} · ${formatWorkspaceDate(file.created_at)}`;
+
+    info.append(name, meta);
+
+    const actions = document.createElement("div");
+    actions.className = "admin-row-actions";
+
+    if (file.download_url) {
+      const download = document.createElement("a");
+      download.className = "admin-mini";
+      download.href = file.download_url;
+      download.target = "_blank";
+      download.rel = "noopener";
+      download.textContent = "Скачать";
+      actions.appendChild(download);
+    }
+
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "admin-mini is-danger";
+    remove.textContent = "Удалить";
+    remove.addEventListener("click", async () => {
+      if (!window.confirm(`Удалить файл «${file.file_name}»?`)) return;
+
+      remove.disabled = true;
+      try {
+        await clientAdminApi({
+          action: "delete_project_file",
+          project_id: currentCollabProjectId,
+          file_id: file.id
+        });
+        await loadProjectCollaboration(currentCollabProjectId);
+      } catch (error) {
+        setStatus(
+          document.querySelector("#admin-client-files-status"),
+          `Ошибка: ${error.message}`,
+          "error"
+        );
+      } finally {
+        remove.disabled = false;
+      }
+    });
+
+    actions.appendChild(remove);
+    row.append(info, actions);
+    root.appendChild(row);
+  }
+}
+
+function renderProjectApprovals() {
+  const root = document.querySelector("#admin-project-approvals");
+  root.replaceChildren();
+
+  const approvals = currentProjectWorkspace.approvals || [];
+
+  if (!approvals.length) {
+    const empty = document.createElement("div");
+    empty.className = "collab-empty";
+    empty.textContent = "Согласований пока нет.";
+    root.appendChild(empty);
+    return;
+  }
+
+  const labels = {
+    pending: "Ждёт клиента",
+    approved: "Принято",
+    changes_requested: "Нужны правки",
+    cancelled: "Отменено"
+  };
+
+  for (const approval of approvals) {
+    const card = document.createElement("article");
+    card.className = `collab-approval is-${approval.status}`;
+
+    const head = document.createElement("div");
+    head.className = "collab-approval__head";
+
+    const titleWrap = document.createElement("div");
+    const title = document.createElement("strong");
+    title.textContent = approval.title;
+    const date = document.createElement("span");
+    date.textContent = formatWorkspaceDate(approval.created_at);
+    titleWrap.append(title, date);
+
+    const status = document.createElement("span");
+    status.className = "project-badge";
+    status.textContent = labels[approval.status] || approval.status;
+
+    head.append(titleWrap, status);
+    card.appendChild(head);
+
+    if (approval.description) {
+      const description = document.createElement("p");
+      description.textContent = approval.description;
+      card.appendChild(description);
+    }
+
+    if (approval.response_note) {
+      const response = document.createElement("div");
+      response.className = "collab-approval__response";
+      const label = document.createElement("strong");
+      label.textContent = "Комментарий клиента";
+      const text = document.createElement("p");
+      text.textContent = approval.response_note;
+      response.append(label, text);
+      card.appendChild(response);
+    }
+
+    if (approval.status === "pending") {
+      const cancel = document.createElement("button");
+      cancel.type = "button";
+      cancel.className = "admin-mini is-danger";
+      cancel.textContent = "Отменить запрос";
+      cancel.addEventListener("click", async () => {
+        cancel.disabled = true;
+        try {
+          await clientAdminApi({
+            action: "cancel_approval",
+            project_id: currentCollabProjectId,
+            approval_id: approval.id
+          });
+          await loadProjectCollaboration(currentCollabProjectId);
+        } catch (error) {
+          setStatus(
+            document.querySelector("#admin-approval-status"),
+            `Ошибка: ${error.message}`,
+            "error"
+          );
+        } finally {
+          cancel.disabled = false;
+        }
+      });
+      card.appendChild(cancel);
+    }
+
+    root.appendChild(card);
+  }
+}
+
+async function loadProjectCollaboration(projectId) {
+  const panel = document.querySelector("#project-collab-panel");
+
+  if (!projectId) {
+    currentCollabProjectId = null;
+    currentProjectWorkspace = { messages: [], files: [], approvals: [] };
+    panel.classList.add("is-hidden");
+    return;
+  }
+
+  currentCollabProjectId = projectId;
+  panel.classList.remove("is-hidden");
+
+  setStatus(document.querySelector("#admin-message-status"), "Загружаю…");
+
+  try {
+    const data = await clientAdminApi({
+      action: "project_workspace",
+      project_id: projectId
+    });
+
+    currentProjectWorkspace = data.workspace || {
+      messages: [],
+      files: [],
+      approvals: []
+    };
+
+    renderProjectMessages();
+    renderProjectFiles();
+    renderProjectApprovals();
+
+    setStatus(document.querySelector("#admin-message-status"), "");
+  } catch (error) {
+    setStatus(
+      document.querySelector("#admin-message-status"),
+      `Ошибка: ${error.message}`,
+      "error"
+    );
+  }
+}
+
 async function loadProjectMedia(projectId) {
   const list = document.querySelector("#media-admin-list");
   const status = document.querySelector("#media-status");
@@ -580,6 +869,7 @@ function resetEditor() {
   currentProjectMedia = [];
   document.querySelector("#project-media-files").value = "";
   loadProjectMedia(null);
+  loadProjectCollaboration(null);
   setStatus(editorStatus, "");
 }
 
@@ -611,6 +901,7 @@ function openEditProject(project) {
   pendingCoverFile = null;
   setCoverPreview(currentCoverUrl);
   loadProjectMedia(project.id);
+  loadProjectCollaboration(project.id);
 
   editorEyebrow.textContent = "Редактирование";
   editorTitle.textContent = project.title || "Проект";
@@ -1662,6 +1953,155 @@ document.querySelector("#client-copy-credentials")?.addEventListener("click", as
     setStatus(status, "Данные доступа скопированы.", "success");
   } catch {
     setStatus(status, "Не удалось скопировать автоматически — скопируй данные из блока.", "error");
+  }
+});
+
+document.querySelectorAll("[data-collab-tab]").forEach(button => {
+  button.addEventListener("click", () => {
+    document.querySelectorAll("[data-collab-tab]").forEach(item => {
+      item.classList.toggle("is-active", item === button);
+    });
+
+    document.querySelectorAll("[data-collab-panel]").forEach(panel => {
+      panel.classList.toggle(
+        "is-hidden",
+        panel.dataset.collabPanel !== button.dataset.collabTab
+      );
+    });
+  });
+});
+
+document.querySelector("#collab-refresh-button")?.addEventListener("click", () => {
+  if (currentCollabProjectId) {
+    loadProjectCollaboration(currentCollabProjectId);
+  }
+});
+
+document.querySelector("#admin-message-form")?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+
+  if (!currentCollabProjectId) return;
+
+  const textarea = document.querySelector("#admin-message-text");
+  const message = textarea.value.trim();
+  const status = document.querySelector("#admin-message-status");
+  const button = event.currentTarget.querySelector('button[type="submit"]');
+
+  if (!message) return;
+
+  button.disabled = true;
+  setStatus(status, "Отправляю…");
+
+  try {
+    await clientAdminApi({
+      action: "send_message",
+      project_id: currentCollabProjectId,
+      message
+    });
+    textarea.value = "";
+    await loadProjectCollaboration(currentCollabProjectId);
+    setStatus(status, "Сообщение отправлено.", "success");
+  } catch (error) {
+    setStatus(status, `Ошибка: ${error.message}`, "error");
+  } finally {
+    button.disabled = false;
+  }
+});
+
+document.querySelector("#admin-client-files-upload")?.addEventListener("click", async () => {
+  if (!currentCollabProjectId) return;
+
+  const picker = document.querySelector("#admin-client-files");
+  const files = Array.from(picker.files || []);
+  const button = document.querySelector("#admin-client-files-upload");
+  const status = document.querySelector("#admin-client-files-status");
+
+  if (!files.length) {
+    setStatus(status, "Сначала выбери файл.");
+    return;
+  }
+
+  button.disabled = true;
+
+  try {
+    for (let index = 0; index < files.length; index++) {
+      const file = files[index];
+
+      if (!file.type) {
+        throw new Error(`Не удалось определить тип «${file.name}».`);
+      }
+
+      if (file.size > 100 * 1024 * 1024) {
+        throw new Error(`Файл «${file.name}» больше 100 МБ.`);
+      }
+
+      setStatus(
+        status,
+        `Загружаю ${index + 1} из ${files.length}: ${file.name}`
+      );
+
+      const prepared = await clientAdminApi({
+        action: "prepare_upload",
+        project_id: currentCollabProjectId,
+        file_name: file.name,
+        mime_type: file.type,
+        size_bytes: file.size
+      });
+
+      await uploadSignedWorkspaceFile(prepared, file);
+
+      await clientAdminApi({
+        action: "commit_upload",
+        project_id: currentCollabProjectId,
+        path: prepared.upload.path,
+        file_name: file.name,
+        mime_type: file.type,
+        size_bytes: file.size
+      });
+    }
+
+    picker.value = "";
+    await loadProjectCollaboration(currentCollabProjectId);
+    setStatus(status, "Файлы загружены.", "success");
+  } catch (error) {
+    setStatus(status, `Ошибка: ${error.message}`, "error");
+  } finally {
+    button.disabled = false;
+  }
+});
+
+document.querySelector("#admin-approval-form")?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+
+  if (!currentCollabProjectId) return;
+
+  const title = document.querySelector("#admin-approval-title").value.trim();
+  const description =
+    document.querySelector("#admin-approval-description").value.trim();
+  const status = document.querySelector("#admin-approval-status");
+  const button = event.currentTarget.querySelector('button[type="submit"]');
+
+  button.disabled = true;
+  setStatus(status, "Отправляю на согласование…");
+
+  try {
+    await clientAdminApi({
+      action: "create_approval",
+      project_id: currentCollabProjectId,
+      title,
+      description
+    });
+
+    event.currentTarget.reset();
+    await loadProjectCollaboration(currentCollabProjectId);
+    setStatus(status, "Запрос на согласование создан.", "success");
+  } catch (error) {
+    const message = error.message === "approval_pending"
+      ? "У проекта уже есть активный запрос на согласование."
+      : `Ошибка: ${error.message}`;
+    setStatus(status, message, "error");
+  } finally {
+    button.disabled = false;
   }
 });
 
