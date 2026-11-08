@@ -11,6 +11,7 @@ on:
       - "*.css"
       - "*.webmanifest"
       - "admin/**"
+      - "client/**"
       - ".github/scripts/qa.mjs"
       - ".github/workflows/qa.yml"
 
@@ -28,6 +29,7 @@ jobs:
         run: |
           node --check script.js
           node --check project.js
+          node --check client/client.js
           node --check admin/admin.js
           node --check sw.js
 
