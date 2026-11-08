@@ -1240,3 +1240,41 @@
     width:96%;
   }
 }
+
+
+.client-auth-log{
+  margin-top:24px;
+  padding-top:20px;
+  border-top:1px solid rgba(46,42,37,.09);
+}
+.admin-panel-head.compact{
+  margin-bottom:12px;
+}
+.admin-panel-head.compact small{
+  display:block;
+  margin-top:4px;
+  color:rgba(46,42,37,.52);
+}
+.client-auth-events{
+  display:grid;
+  gap:7px;
+}
+.client-auth-event{
+  display:flex;
+  justify-content:space-between;
+  gap:16px;
+  align-items:center;
+  padding:10px 12px;
+  border:1px solid rgba(46,42,37,.08);
+  border-radius:12px;
+  background:rgba(255,255,255,.26);
+}
+.client-auth-event > div{
+  display:grid;
+  gap:3px;
+}
+.client-auth-event span,
+.client-auth-event time{
+  color:rgba(46,42,37,.55);
+  font-size:12px;
+}
