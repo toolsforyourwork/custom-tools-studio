@@ -997,3 +997,246 @@
     grid-template-columns: 1fr;
   }
 }
+
+
+.collab-field{
+  display:grid;
+  gap:14px;
+  padding:20px;
+  border:1px solid rgba(46,42,37,.12);
+  border-radius:18px;
+  background:rgba(244,240,231,.48);
+}
+
+.collab-field__head{
+  display:flex;
+  justify-content:space-between;
+  gap:16px;
+  align-items:flex-start;
+}
+
+.collab-field__head small{
+  display:block;
+  margin-top:5px;
+  color:rgba(46,42,37,.56);
+  line-height:1.45;
+}
+
+.collab-tabs{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  padding-bottom:12px;
+  border-bottom:1px solid rgba(46,42,37,.08);
+}
+
+.collab-tabs .is-active{
+  background:var(--ink);
+  color:var(--paper);
+  border-color:var(--ink);
+}
+
+.collab-panel{
+  display:grid;
+  gap:12px;
+}
+
+.collab-messages{
+  display:grid;
+  gap:9px;
+  max-height:420px;
+  overflow:auto;
+}
+
+.collab-message{
+  width:min(86%,680px);
+  padding:12px 14px;
+  border:1px solid rgba(46,42,37,.1);
+  border-radius:15px;
+}
+
+.collab-message.is-admin{
+  justify-self:end;
+  background:rgba(212,167,44,.1);
+}
+
+.collab-message.is-client{
+  justify-self:start;
+  background:rgba(100,125,175,.08);
+}
+
+.collab-message__head{
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom:6px;
+}
+
+.collab-message__head span{
+  color:rgba(46,42,37,.52);
+  font-size:11px;
+}
+
+.collab-message p{
+  margin:0;
+  white-space:pre-wrap;
+  line-height:1.55;
+}
+
+.collab-message-form,
+.collab-approval-form{
+  display:grid;
+  gap:10px;
+  padding-top:12px;
+  border-top:1px solid rgba(46,42,37,.08);
+}
+
+.collab-message-form textarea,
+.collab-approval-form input,
+.collab-approval-form textarea{
+  width:100%;
+  padding:12px 14px;
+  border:1px solid rgba(46,42,37,.16);
+  border-radius:13px;
+  background:var(--bg);
+  color:var(--ink);
+  font:inherit;
+}
+
+.collab-form-actions{
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  align-items:center;
+}
+
+.collab-form-actions span{
+  color:rgba(46,42,37,.52);
+  font-size:12px;
+}
+
+.collab-upload{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) minmax(220px,.8fr) auto;
+  gap:12px;
+  align-items:center;
+  padding:14px;
+  border:1px dashed rgba(46,42,37,.18);
+  border-radius:14px;
+}
+
+.collab-upload > div{
+  display:grid;
+  gap:4px;
+}
+
+.collab-upload > div span{
+  color:rgba(46,42,37,.52);
+  font-size:12px;
+}
+
+.collab-files,
+.collab-approvals{
+  display:grid;
+  gap:8px;
+}
+
+.collab-file-row{
+  display:flex;
+  justify-content:space-between;
+  gap:14px;
+  align-items:center;
+  padding:12px 0;
+  border-bottom:1px solid rgba(46,42,37,.08);
+}
+
+.collab-file-info{
+  display:grid;
+  gap:4px;
+  min-width:0;
+}
+
+.collab-file-info strong{
+  overflow-wrap:anywhere;
+}
+
+.collab-file-info span{
+  color:rgba(46,42,37,.52);
+  font-size:12px;
+}
+
+.collab-approval{
+  display:grid;
+  gap:11px;
+  padding:15px;
+  border:1px solid rgba(46,42,37,.1);
+  border-radius:14px;
+  background:rgba(255,255,255,.28);
+}
+
+.collab-approval.is-pending{
+  border-color:rgba(212,167,44,.35);
+  background:rgba(233,217,157,.14);
+}
+
+.collab-approval__head{
+  display:flex;
+  justify-content:space-between;
+  gap:14px;
+  align-items:flex-start;
+}
+
+.collab-approval__head > div{
+  display:grid;
+  gap:4px;
+}
+
+.collab-approval__head > div span{
+  color:rgba(46,42,37,.52);
+  font-size:11px;
+}
+
+.collab-approval > p,
+.collab-approval__response p{
+  margin:0;
+  color:rgba(46,42,37,.68);
+  line-height:1.55;
+  white-space:pre-wrap;
+}
+
+.collab-approval__response{
+  padding:10px 12px;
+  border-radius:12px;
+  background:rgba(46,42,37,.045);
+}
+
+.collab-approval__response strong{
+  font-size:12px;
+  color:var(--blue);
+}
+
+.collab-empty{
+  padding:20px 14px;
+  border:1px dashed rgba(46,42,37,.16);
+  border-radius:13px;
+  color:rgba(46,42,37,.52);
+  text-align:center;
+}
+
+@media(max-width:760px){
+  .collab-field__head,
+  .collab-file-row,
+  .collab-form-actions,
+  .collab-approval__head{
+    align-items:stretch;
+    flex-direction:column;
+  }
+
+  .collab-upload{
+    grid-template-columns:1fr;
+  }
+
+  .collab-message{
+    width:96%;
+  }
+}
