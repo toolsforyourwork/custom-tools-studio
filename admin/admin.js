@@ -36,6 +36,7 @@ const USER_KEY = "custom_tools_admin_user_id";
 
 let projects = [];
 let clients = [];
+let clientAuthEvents = [];
 let analyticsDays = 7;
 let slugWasEdited = false;
 let pendingCoverFile = null;
@@ -1368,6 +1369,40 @@ function clientErrorMessage(error) {
   return code || "Неизвестная ошибка";
 }
 
+function renderClientAuthEvents() {
+  const root = document.querySelector("#client-auth-events");
+  if (!root) return;
+
+  root.replaceChildren();
+
+  if (!clientAuthEvents.length) {
+    const empty = document.createElement("div");
+    empty.className = "admin-empty";
+    empty.textContent = "Событий пока нет.";
+    root.appendChild(empty);
+    return;
+  }
+
+  for (const event of clientAuthEvents) {
+    const row = document.createElement("div");
+    row.className = "client-auth-event";
+
+    const main = document.createElement("div");
+    const title = document.createElement("strong");
+    title.textContent =
+      event.event_type === "registration" ? "Регистрация" : "Вход";
+    const email = document.createElement("span");
+    email.textContent = event.email || "—";
+    main.append(title, email);
+
+    const date = document.createElement("time");
+    date.textContent = formatWorkspaceDate(event.created_at);
+
+    row.append(main, date);
+    root.appendChild(row);
+  }
+}
+
 function renderClients() {
   const root = document.querySelector("#admin-client-list");
   root.replaceChildren();
@@ -1546,7 +1581,9 @@ async function loadClients() {
   try {
     const data = await clientAdminApi({ action: "list" });
     clients = data.clients || [];
+    clientAuthEvents = data.auth_events || [];
     renderClients();
+    renderClientAuthEvents();
     setStatus(
       status,
       clients.length ? `Клиентов: ${clients.length}` : "",
