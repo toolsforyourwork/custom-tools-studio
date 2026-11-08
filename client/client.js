@@ -933,6 +933,15 @@ function renderProjects(projects) {
   }
 }
 
+async function refreshRequestStatuses() {
+  if (!token() || dashboardView.classList.contains("is-hidden")) return;
+
+  try {
+    const data = await portalApi({ action: "dashboard" });
+    renderRequests(Array.isArray(data.requests) ? data.requests : []);
+  } catch {}
+}
+
 async function loadDashboard() {
   setStatus(dashboardStatus, "Загружаю кабинет…");
 
@@ -1138,6 +1147,8 @@ document.querySelector("#client-logout").addEventListener("click", async () => {
 
 window.setInterval(() => {
   if (!token() || dashboardView.classList.contains("is-hidden")) return;
+
+  refreshRequestStatuses();
 
   for (const [slug, state] of projectCards) {
     if (state.card.open && state.loaded) {
