@@ -19,6 +19,10 @@ const clientHtml = read("client/index.html");
 assert(/noindex/i.test(clientHtml), "client/index.html: missing noindex");
 assert(/<button\b[^>]*type=["'][^"']+["']/i.test(clientHtml), "client/index.html: buttons missing type");
 assert(read("client/client.js").includes("client-portal"), "client/client.js: portal API missing");
+assert(read("client/client.js").includes("client-workspace-tabs"), "client collaboration tabs missing");
+assert(read("client/client.js").includes("prepare_upload"), "client signed upload flow missing");
+assert(read("admin/index.html").includes('id="project-collab-panel"'), "admin collaboration panel missing");
+assert(read("admin/admin.js").includes('"create_approval"'), "admin approval flow missing");
 
 const requiredProdUrls = [
   "https://toolsforyourwork.github.io/custom-tools-studio/",
