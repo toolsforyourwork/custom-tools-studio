@@ -485,10 +485,11 @@ function createProjectWorkspace(project) {
     text.textContent = label;
     button.appendChild(text);
 
-    if (key === "approvals" && project.pending_approvals > 0) {
+    if (key === "approvals") {
       const badge = document.createElement("b");
-      badge.textContent = String(project.pending_approvals);
+      badge.textContent = String(project.pending_approvals || 0);
       badge.dataset.approvalBadge = project.slug;
+      badge.classList.toggle("is-hidden", !project.pending_approvals);
       button.appendChild(badge);
     }
 
@@ -645,6 +646,17 @@ function renderApprovals(project, workspace) {
   if (badge) {
     badge.textContent = String(pendingCount);
     badge.classList.toggle("is-hidden", pendingCount === 0);
+  }
+
+  const summaryBadge = projectCards
+    .get(project.slug)
+    ?.card.querySelector(
+      `[data-summary-approval-badge="${project.slug}"]`
+    );
+
+  if (summaryBadge) {
+    summaryBadge.textContent = `Нужно согласование: ${pendingCount}`;
+    summaryBadge.classList.toggle("is-hidden", pendingCount === 0);
   }
 
   if (!approvals.length) {
@@ -821,13 +833,13 @@ function renderProjects(projects) {
       meta.appendChild(status);
     }
 
-    if (project.pending_approvals > 0) {
-      const pending = document.createElement("span");
-      pending.className = "client-status-badge is-attention";
-      pending.textContent =
-        `Нужно согласование: ${project.pending_approvals}`;
-      meta.appendChild(pending);
-    }
+    const pending = document.createElement("span");
+    pending.className = "client-status-badge is-attention";
+    pending.dataset.summaryApprovalBadge = project.slug;
+    pending.textContent =
+      `Нужно согласование: ${project.pending_approvals || 0}`;
+    pending.classList.toggle("is-hidden", !project.pending_approvals);
+    meta.appendChild(pending);
 
     const title = document.createElement("h3");
     title.textContent = project.title || "Проект";
