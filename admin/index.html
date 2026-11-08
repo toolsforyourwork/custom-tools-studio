@@ -75,7 +75,7 @@
         </div>
 
         <p class="client-admin-note">
-          Создай клиенту доступ, передай email и временный пароль. При первом входе кабинет заставит сменить пароль.
+          Основной сценарий: клиент сначала отправляет заявку, затем сам регистрируется по тому же email. Ручное создание доступа ниже оставлено как запасной вариант.
         </p>
 
         <form class="client-create-form" id="client-create-form">
@@ -101,6 +101,16 @@
 
         <div class="admin-client-list" id="admin-client-list"></div>
         <p class="admin-status" id="clients-status" role="status"></p>
+
+        <div class="client-auth-log">
+          <div class="admin-panel-head compact">
+            <div>
+              <span class="cover-label">Регистрации и входы</span>
+              <small>Последние 100 успешных событий клиентского кабинета.</small>
+            </div>
+          </div>
+          <div class="client-auth-events" id="client-auth-events"></div>
+        </div>
       </section>
 
       <section class="admin-health" id="health-panel">
