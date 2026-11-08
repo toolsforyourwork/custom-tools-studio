@@ -375,6 +375,63 @@
             <div class="media-admin-list" id="media-admin-list"></div>
           </section>
 
+          <section class="collab-field is-hidden" id="project-collab-panel">
+            <div class="collab-field__head">
+              <div>
+                <span class="cover-label">Работа с клиентом</span>
+                <small>Обсуждение, приватные файлы и согласование этапов — всё внутри этого проекта.</small>
+              </div>
+              <button class="admin-ghost" id="collab-refresh-button" type="button">Обновить</button>
+            </div>
+
+            <div class="collab-tabs" role="tablist">
+              <button class="admin-mini is-active" type="button" data-collab-tab="discussion">Обсуждение</button>
+              <button class="admin-mini" type="button" data-collab-tab="files">Файлы</button>
+              <button class="admin-mini" type="button" data-collab-tab="approval">Согласование</button>
+            </div>
+
+            <div class="collab-panel" data-collab-panel="discussion">
+              <div class="collab-messages" id="admin-project-messages"></div>
+              <form class="collab-message-form" id="admin-message-form">
+                <textarea id="admin-message-text" rows="3" maxlength="5000" placeholder="Ответить клиенту по проекту…" required></textarea>
+                <div class="collab-form-actions">
+                  <span>История хранится внутри проекта.</span>
+                  <button class="button" type="submit">Отправить</button>
+                </div>
+              </form>
+              <p class="admin-status" id="admin-message-status" role="status"></p>
+            </div>
+
+            <div class="collab-panel is-hidden" data-collab-panel="files">
+              <div class="collab-upload">
+                <div>
+                  <strong>Приватные файлы проекта</strong>
+                  <span>PDF, ZIP, документы, изображения и видео — до 100 МБ на файл.</span>
+                </div>
+                <input id="admin-client-files" type="file" multiple accept=".pdf,.zip,.txt,.csv,.json,.jpg,.jpeg,.png,.webp,.avif,.mp4,.webm,.mov,.docx,.xlsx,.pptx">
+                <button class="admin-ghost" id="admin-client-files-upload" type="button">Загрузить</button>
+              </div>
+              <p class="admin-status" id="admin-client-files-status" role="status"></p>
+              <div class="collab-files" id="admin-project-files"></div>
+            </div>
+
+            <div class="collab-panel is-hidden" data-collab-panel="approval">
+              <form class="collab-approval-form" id="admin-approval-form">
+                <label>
+                  <span>Что отправляем на согласование *</span>
+                  <input id="admin-approval-title" type="text" maxlength="240" required placeholder="Например, Финальная версия интерфейса">
+                </label>
+                <label>
+                  <span>Комментарий клиенту</span>
+                  <textarea id="admin-approval-description" rows="3" maxlength="5000" placeholder="Что проверить и на что обратить внимание"></textarea>
+                </label>
+                <button class="button" type="submit">Отправить на согласование</button>
+              </form>
+              <p class="admin-status" id="admin-approval-status" role="status"></p>
+              <div class="collab-approvals" id="admin-project-approvals"></div>
+            </div>
+          </section>
+
           <label class="publish-toggle">
             <input id="project-published" type="checkbox">
             <span>
