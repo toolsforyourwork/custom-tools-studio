@@ -189,14 +189,20 @@ document.querySelectorAll("form.demo-form").forEach(form=>{
 
     const payload = {
       name: (form.elements.name?.value || "").trim(),
+      email: (form.elements.email?.value || "").trim().toLowerCase(),
       contact: (form.elements.contact?.value || "").trim(),
       message: (form.elements.message?.value || "").trim(),
       website: (form.elements.website?.value || "").trim(),
       consent: Boolean(form.elements.consent?.checked)
     };
 
-    if (!payload.name || !payload.contact || !payload.message) {
+    if (!payload.name || !payload.email || !payload.contact || !payload.message) {
       status.textContent = "Заполни все поля.";
+      return;
+    }
+
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(payload.email)) {
+      status.textContent = "Проверь email.";
       return;
     }
 
@@ -228,7 +234,7 @@ document.querySelectorAll("form.demo-form").forEach(form=>{
       }
 
       form.reset();
-      status.textContent = "Готово. Заявка отправлена.";
+      status.textContent = "Готово. Заявка отправлена. Этот email потом можно использовать для регистрации в клиентском кабинете.";
       trackSiteEvent("request_submit_success");
     } catch (error) {
       console.error(error);
