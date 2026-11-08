@@ -704,6 +704,12 @@ function renderApprovals(project, workspace) {
       changes.textContent = "Нужны правки";
 
       async function respond(nextStatus) {
+        if (nextStatus === "changes_requested" && !note.value.trim()) {
+          window.alert("Коротко опишите, что нужно поправить.");
+          note.focus();
+          return;
+        }
+
         approve.disabled = true;
         changes.disabled = true;
 
