@@ -35,6 +35,7 @@ const EMAIL_KEY = "custom_tools_admin_email";
 const USER_KEY = "custom_tools_admin_user_id";
 
 let projects = [];
+let clients = [];
 let analyticsDays = 7;
 let slugWasEdited = false;
 let pendingCoverFile = null;
@@ -149,6 +150,30 @@ async function storageMaintenanceApi(body, retry = true) {
 
   if (!response.ok || data?.ok === false) {
     throw new Error(data?.error || data?.errors?.join("; ") || `HTTP ${response.status}`);
+  }
+
+  return data;
+}
+
+async function clientAdminApi(body, retry = true) {
+  const response = await fetch(`${SUPABASE_URL}/functions/v1/client-admin`, {
+    method: "POST",
+    headers: {
+      apikey: SUPABASE_KEY,
+      Authorization: `Bearer ${currentToken()}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(body)
+  });
+
+  if (response.status === 401 && retry && await refreshSession()) {
+    return clientAdminApi(body, false);
+  }
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok || !data?.ok) {
+    throw new Error(data?.error || `HTTP ${response.status}`);
   }
 
   return data;
@@ -1030,6 +1055,216 @@ async function loadAnalytics(days = analyticsDays) {
   }
 }
 
+function showClientCredentials(email, password) {
+  const box = document.querySelector("#client-credentials");
+  document.querySelector("#client-credentials-email").textContent = email || "";
+  document.querySelector("#client-credentials-password").textContent = password || "";
+  box.classList.remove("is-hidden");
+}
+
+function clientErrorMessage(error) {
+  const code = String(error?.message || "");
+
+  if (code === "reserved_admin_account") {
+    return "Этот email используется администратором. Для клиента нужен другой адрес.";
+  }
+
+  if (code === "invalid_email") {
+    return "Проверь email клиента.";
+  }
+
+  return code || "Неизвестная ошибка";
+}
+
+function renderClients() {
+  const root = document.querySelector("#admin-client-list");
+  root.replaceChildren();
+
+  if (!clients.length) {
+    const empty = document.createElement("div");
+    empty.className = "admin-empty";
+    empty.textContent = "Клиентов пока нет.";
+    root.appendChild(empty);
+    return;
+  }
+
+  for (const client of clients) {
+    const card = document.createElement("article");
+    card.className = "admin-client-card";
+
+    const head = document.createElement("div");
+    head.className = "admin-client-head";
+
+    const identity = document.createElement("div");
+    identity.className = "admin-client-identity";
+
+    const title = document.createElement("strong");
+    title.textContent = client.display_name || client.email;
+
+    const email = document.createElement("span");
+    email.textContent = client.email;
+
+    const badges = document.createElement("div");
+    badges.className = "admin-client-badges";
+
+    const activeBadge = document.createElement("span");
+    activeBadge.className = `project-badge ${client.active ? "is-published" : ""}`;
+    activeBadge.textContent = client.active ? "Доступ активен" : "Доступ закрыт";
+    badges.appendChild(activeBadge);
+
+    if (client.must_change_password) {
+      const passwordBadge = document.createElement("span");
+      passwordBadge.className = "project-badge";
+      passwordBadge.textContent = "Ждём смену пароля";
+      badges.appendChild(passwordBadge);
+    }
+
+    identity.append(title, email, badges);
+
+    const actions = document.createElement("div");
+    actions.className = "admin-row-actions";
+
+    const activeButton = document.createElement("button");
+    activeButton.type = "button";
+    activeButton.className = client.active ? "admin-mini is-danger" : "admin-mini";
+    activeButton.textContent = client.active ? "Закрыть доступ" : "Вернуть доступ";
+    activeButton.addEventListener("click", async () => {
+      const status = document.querySelector("#clients-status");
+      activeButton.disabled = true;
+      setStatus(status, client.active ? "Закрываю доступ…" : "Возвращаю доступ…");
+
+      try {
+        await clientAdminApi({
+          action: "set_active",
+          user_id: client.user_id,
+          active: !client.active
+        });
+        await loadClients();
+        setStatus(status, "Доступ обновлён.", "success");
+      } catch (error) {
+        setStatus(status, `Ошибка: ${clientErrorMessage(error)}`, "error");
+      } finally {
+        activeButton.disabled = false;
+      }
+    });
+
+    const resetButton = document.createElement("button");
+    resetButton.type = "button";
+    resetButton.className = "admin-mini";
+    resetButton.textContent = "Сбросить пароль";
+    resetButton.addEventListener("click", async () => {
+      if (!window.confirm(`Сбросить пароль для ${client.email}?`)) return;
+
+      const status = document.querySelector("#clients-status");
+      resetButton.disabled = true;
+      setStatus(status, "Создаю новый временный пароль…");
+
+      try {
+        const data = await clientAdminApi({
+          action: "reset_password",
+          user_id: client.user_id
+        });
+        showClientCredentials(client.email, data.temporary_password);
+        await loadClients();
+        setStatus(status, "Новый временный пароль создан.", "success");
+      } catch (error) {
+        setStatus(status, `Ошибка: ${clientErrorMessage(error)}`, "error");
+      } finally {
+        resetButton.disabled = false;
+      }
+    });
+
+    actions.append(activeButton, resetButton);
+    head.append(identity, actions);
+
+    const access = document.createElement("div");
+    access.className = "admin-client-access";
+
+    const accessTitle = document.createElement("span");
+    accessTitle.className = "cover-label";
+    accessTitle.textContent = "Доступ к проектам";
+
+    const projectGrid = document.createElement("div");
+    projectGrid.className = "admin-client-projects";
+
+    const selected = new Set(client.project_ids || []);
+
+    if (!projects.length) {
+      const none = document.createElement("span");
+      none.className = "client-admin-muted";
+      none.textContent = "В базе пока нет проектов.";
+      projectGrid.appendChild(none);
+    } else {
+      for (const project of projects) {
+        const label = document.createElement("label");
+        label.className = "admin-client-project-option";
+
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.value = project.id;
+        checkbox.checked = selected.has(project.id);
+
+        const text = document.createElement("span");
+        text.textContent = project.title;
+
+        label.append(checkbox, text);
+        projectGrid.appendChild(label);
+      }
+    }
+
+    const saveAccess = document.createElement("button");
+    saveAccess.type = "button";
+    saveAccess.className = "admin-ghost";
+    saveAccess.textContent = "Сохранить доступ к проектам";
+    saveAccess.disabled = !projects.length;
+    saveAccess.addEventListener("click", async () => {
+      const status = document.querySelector("#clients-status");
+      const projectIds = Array.from(
+        projectGrid.querySelectorAll('input[type="checkbox"]:checked')
+      ).map(input => input.value);
+
+      saveAccess.disabled = true;
+      setStatus(status, "Сохраняю доступ…");
+
+      try {
+        await clientAdminApi({
+          action: "set_projects",
+          user_id: client.user_id,
+          project_ids: projectIds
+        });
+        await loadClients();
+        setStatus(status, "Проекты клиента обновлены.", "success");
+      } catch (error) {
+        setStatus(status, `Ошибка: ${clientErrorMessage(error)}`, "error");
+      } finally {
+        saveAccess.disabled = false;
+      }
+    });
+
+    access.append(accessTitle, projectGrid, saveAccess);
+    card.append(head, access);
+    root.appendChild(card);
+  }
+}
+
+async function loadClients() {
+  const status = document.querySelector("#clients-status");
+  setStatus(status, "Загружаю клиентов…");
+
+  try {
+    const data = await clientAdminApi({ action: "list" });
+    clients = data.clients || [];
+    renderClients();
+    setStatus(
+      status,
+      clients.length ? `Клиентов: ${clients.length}` : "",
+      clients.length ? "success" : ""
+    );
+  } catch (error) {
+    setStatus(status, `Ошибка: ${clientErrorMessage(error)}`, "error");
+  }
+}
+
 async function loadProjects() {
   setStatus(dashboardStatus, "Загружаю проекты…");
 
@@ -1129,6 +1364,7 @@ async function showDashboard() {
   dashboardView.classList.remove("is-hidden");
   adminUser.textContent = sessionStorage.getItem(EMAIL_KEY) || "Администратор";
   await loadProjects();
+  await loadClients();
   await loadAnalytics(analyticsDays);
   await loadHealth();
   await loadBackups();
@@ -1379,9 +1615,53 @@ cancelEdit.addEventListener("click", closeEditor);
 cancelEditBottom.addEventListener("click", closeEditor);
 refreshButton.addEventListener("click", async () => {
   await loadProjects();
+  await loadClients();
   await loadAnalytics(analyticsDays);
   await loadHealth();
   await loadBackups();
+});
+
+document.querySelector("#client-create-form")?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+
+  const status = document.querySelector("#clients-status");
+  const email = document.querySelector("#client-create-email").value.trim();
+  const displayName = document.querySelector("#client-create-name").value.trim();
+  const button = event.currentTarget.querySelector('button[type="submit"]');
+
+  button.disabled = true;
+  setStatus(status, "Создаю клиентский доступ…");
+
+  try {
+    const data = await clientAdminApi({
+      action: "create",
+      email,
+      display_name: displayName
+    });
+
+    showClientCredentials(data.client.email, data.temporary_password);
+    event.currentTarget.reset();
+    await loadClients();
+    setStatus(status, "Доступ создан. Передай клиенту email и временный пароль.", "success");
+  } catch (error) {
+    setStatus(status, `Ошибка: ${clientErrorMessage(error)}`, "error");
+  } finally {
+    button.disabled = false;
+  }
+});
+
+document.querySelector("#client-copy-credentials")?.addEventListener("click", async () => {
+  const status = document.querySelector("#clients-status");
+  const email = document.querySelector("#client-credentials-email").textContent.trim();
+  const password = document.querySelector("#client-credentials-password").textContent.trim();
+  const text = `Клиентский кабинет: https://toolsforyourwork.github.io/custom-tools-studio/client/\nEmail: ${email}\nВременный пароль: ${password}`;
+
+  try {
+    await navigator.clipboard.writeText(text);
+    setStatus(status, "Данные доступа скопированы.", "success");
+  } catch {
+    setStatus(status, "Не удалось скопировать автоматически — скопируй данные из блока.", "error");
+  }
 });
 
 document.querySelector("#health-refresh-button")?.addEventListener("click", loadHealth);
