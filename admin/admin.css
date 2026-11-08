@@ -834,3 +834,166 @@
     flex-direction: column;
   }
 }
+
+
+.admin-clients {
+  padding: clamp(22px, 4vw, 34px);
+  background: var(--paper);
+  border: 1px solid rgba(46,42,37,.12);
+  border-radius: 24px;
+}
+
+.admin-clients h2 {
+  margin: 4px 0 0;
+}
+
+.client-admin-note {
+  max-width: 760px;
+  margin: 18px 0 0;
+  color: rgba(46,42,37,.6);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.client-create-form {
+  display: grid;
+  grid-template-columns: 1fr 1.25fr auto;
+  gap: 12px;
+  align-items: end;
+  margin-top: 20px;
+}
+
+.client-create-form label {
+  display: grid;
+  gap: 7px;
+  font-size: 13px;
+}
+
+.client-create-form input {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid rgba(46,42,37,.16);
+  border-radius: 13px;
+  background: var(--bg);
+  color: var(--ink);
+  font: inherit;
+}
+
+.client-credentials {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  align-items: center;
+  margin-top: 18px;
+  padding: 16px 18px;
+  border: 1px solid rgba(212,167,44,.36);
+  border-radius: 16px;
+  background: rgba(233,217,157,.24);
+}
+
+.client-credentials > div {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.client-credentials__label {
+  color: rgba(46,42,37,.58);
+  font-size: 12px;
+}
+
+.client-credentials code {
+  display: inline-block;
+  overflow-wrap: anywhere;
+  color: var(--blue);
+  font-size: 14px;
+}
+
+.admin-client-list {
+  display: grid;
+  gap: 14px;
+  margin-top: 22px;
+}
+
+.admin-client-card {
+  padding: 18px;
+  border: 1px solid rgba(46,42,37,.1);
+  border-radius: 18px;
+  background: rgba(244,240,231,.5);
+}
+
+.admin-client-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: flex-start;
+}
+
+.admin-client-identity {
+  display: grid;
+  gap: 5px;
+}
+
+.admin-client-identity > span {
+  color: rgba(46,42,37,.58);
+  font-size: 13px;
+}
+
+.admin-client-badges {
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+  margin-top: 5px;
+}
+
+.admin-client-access {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(46,42,37,.09);
+}
+
+.admin-client-projects {
+  display: grid;
+  grid-template-columns: repeat(2,minmax(0,1fr));
+  gap: 8px;
+}
+
+.admin-client-project-option {
+  display: flex;
+  gap: 9px;
+  align-items: flex-start;
+  padding: 10px 12px;
+  border: 1px solid rgba(46,42,37,.09);
+  border-radius: 12px;
+  background: rgba(255,255,255,.28);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.admin-client-project-option input {
+  margin-top: 2px;
+  accent-color: var(--blue);
+}
+
+.client-admin-muted {
+  color: rgba(46,42,37,.52);
+  font-size: 13px;
+}
+
+@media (max-width: 760px) {
+  .client-create-form {
+    grid-template-columns: 1fr;
+  }
+
+  .client-credentials,
+  .admin-client-head {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .admin-client-projects {
+    grid-template-columns: 1fr;
+  }
+}
