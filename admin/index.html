@@ -65,6 +65,44 @@
         </div>
       </div>
 
+      <section class="admin-clients" id="clients-panel">
+        <div class="admin-panel-head">
+          <div>
+            <p class="eyebrow">Клиентский кабинет</p>
+            <h2>Клиенты и доступ</h2>
+          </div>
+          <a class="admin-ghost" href="../client/" target="_blank" rel="noopener">Открыть кабинет</a>
+        </div>
+
+        <p class="client-admin-note">
+          Создай клиенту доступ, передай email и временный пароль. При первом входе кабинет заставит сменить пароль.
+        </p>
+
+        <form class="client-create-form" id="client-create-form">
+          <label>
+            <span>Имя / компания</span>
+            <input id="client-create-name" type="text" maxlength="160" placeholder="Например, Алексей / Studio X">
+          </label>
+          <label>
+            <span>Email *</span>
+            <input id="client-create-email" type="email" maxlength="254" autocomplete="off" required placeholder="client@example.com">
+          </label>
+          <button class="button" type="submit">Создать доступ</button>
+        </form>
+
+        <div class="client-credentials is-hidden" id="client-credentials">
+          <div>
+            <span class="client-credentials__label">Временный доступ — показывается только сейчас</span>
+            <strong id="client-credentials-email"></strong>
+            <code id="client-credentials-password"></code>
+          </div>
+          <button class="admin-ghost" id="client-copy-credentials" type="button">Скопировать</button>
+        </div>
+
+        <div class="admin-client-list" id="admin-client-list"></div>
+        <p class="admin-status" id="clients-status" role="status"></p>
+      </section>
+
       <section class="admin-health" id="health-panel">
         <div class="admin-panel-head">
           <div>
