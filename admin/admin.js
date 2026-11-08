@@ -1029,7 +1029,13 @@ async function loadHealth() {
     setHealthCard("#health-database", data.checks.database, "Доступна");
     setHealthCard("#health-content", data.checks.content, "Работает");
     setHealthCard("#health-client-portal", data.checks.client_portal, "Работает · доступ закрыт");
-    setHealthCard("#health-client-register", data.checks.client_register, "Работает");
+    setHealthCard(
+      "#health-client-register",
+      data.checks.client_register,
+      data.checks.client_register?.email_confirmation
+        ? "Работает · подтверждение включено"
+        : "Ошибка конфигурации"
+    );
     setHealthCard(
       "#health-form",
       data.checks.form,
