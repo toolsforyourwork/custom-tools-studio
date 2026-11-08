@@ -15,6 +15,11 @@ const publicPages = [
   "offline.html"
 ];
 
+const clientHtml = read("client/index.html");
+assert(/noindex/i.test(clientHtml), "client/index.html: missing noindex");
+assert(/<button\b[^>]*type=["'][^"']+["']/i.test(clientHtml), "client/index.html: buttons missing type");
+assert(read("client/client.js").includes("client-portal"), "client/client.js: portal API missing");
+
 const requiredProdUrls = [
   "https://toolsforyourwork.github.io/custom-tools-studio/",
   "https://toolsforyourwork.github.io/custom-tools-studio/approach.html",
@@ -22,6 +27,7 @@ const requiredProdUrls = [
   "https://toolsforyourwork.github.io/custom-tools-studio/identity.html",
   "https://toolsforyourwork.github.io/custom-tools-studio/contacts.html",
   "https://toolsforyourwork.github.io/custom-tools-studio/request.html",
+  "https://toolsforyourwork.github.io/custom-tools-studio/client/",
   "https://toolsforyourwork.github.io/custom-tools-studio/privacy.html",
   "https://toolsforyourwork.github.io/custom-tools-studio/404.html",
   "https://toolsforyourwork.github.io/custom-tools-studio/admin/",
@@ -213,6 +219,20 @@ if (process.env.QA_PRODUCTION === "1") {
   }
 
   try {
+    const clientPortal = await fetch(
+      "https://bpdqosfgxqawbzljafgb.supabase.co/functions/v1/client-portal",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "dashboard" })
+      }
+    );
+    assert(clientPortal.status === 401, `client-portal unauthorized check returned HTTP ${clientPortal.status}`);
+  } catch (error) {
+    errors.push(`client-portal unauthorized: ${error.message}`);
+  }
+
+  try {
     const response = await fetchWithRetry(
       "https://bpdqosfgxqawbzljafgb.supabase.co/functions/v1/health-check"
     );
@@ -221,6 +241,7 @@ if (process.env.QA_PRODUCTION === "1") {
     assert(health?.checks?.site?.ok === true, "health-check: site failed");
     assert(health?.checks?.database?.ok === true, "health-check: database failed");
     assert(health?.checks?.content?.ok === true, "health-check: content API failed");
+    assert(health?.checks?.client_portal?.ok === true, "health-check: client portal failed");
     assert(health?.checks?.form?.ok === true, "health-check: form failed");
     assert(health?.checks?.telegram?.ok === true, "health-check: Telegram failed");
   } catch (error) {
