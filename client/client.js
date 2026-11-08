@@ -12,6 +12,13 @@ const STATUS_LABELS = {
   completed: "Готов"
 };
 
+const REQUEST_STATUS_LABELS = {
+  new: "Заявка получена",
+  in_progress: "Разбираем задачу",
+  replied: "Связались с вами",
+  closed: "Завершено"
+};
+
 const APPROVAL_LABELS = {
   pending: "Ждёт ответа",
   approved: "Принято",
@@ -27,6 +34,8 @@ const dashboardStatus = document.querySelector("#client-dashboard-status");
 const passwordPanel = document.querySelector("#client-password-panel");
 const projectsSection = document.querySelector("#client-projects-section");
 const projectsRoot = document.querySelector("#client-projects");
+const requestsRoot = document.querySelector("#client-requests");
+const registerForm = document.querySelector("#client-register-form");
 
 const projectCards = new Map();
 let dashboardProjects = [];
@@ -795,6 +804,45 @@ async function loadWorkspace(slug, force = false) {
   }
 }
 
+function renderRequests(requests) {
+  requestsRoot.replaceChildren();
+
+  if (!requests.length) {
+    requestsRoot.appendChild(
+      makeEmpty("Заявок, привязанных к этому аккаунту, пока нет.")
+    );
+    return;
+  }
+
+  for (const request of requests) {
+    const card = document.createElement("article");
+    card.className = "client-request-card";
+
+    const head = document.createElement("div");
+    head.className = "client-request-head";
+
+    const titleWrap = document.createElement("div");
+    const title = document.createElement("strong");
+    title.textContent = "Заявка";
+    const date = document.createElement("span");
+    date.textContent = formatDate(request.created_at);
+    titleWrap.append(title, date);
+
+    const status = document.createElement("span");
+    status.className = "client-status-badge";
+    status.textContent =
+      REQUEST_STATUS_LABELS[request.status] || request.status || "В работе";
+
+    head.append(titleWrap, status);
+
+    const text = document.createElement("p");
+    text.textContent = request.message || "";
+
+    card.append(head, text);
+    requestsRoot.appendChild(card);
+  }
+}
+
 function renderProjects(projects) {
   dashboardProjects = projects;
   projectsRoot.replaceChildren();
@@ -904,11 +952,24 @@ async function loadDashboard() {
   projectsSection.classList.toggle("is-hidden", mustChange);
 
   if (!mustChange) {
+    renderRequests(Array.isArray(data.requests) ? data.requests : []);
     renderProjects(Array.isArray(data.projects) ? data.projects : []);
   }
 
   setStatus(dashboardStatus, "");
 }
+
+function setAuthMode(mode) {
+  const loginMode = mode === "login";
+  loginForm.classList.toggle("is-hidden", !loginMode);
+  registerForm.classList.toggle("is-hidden", loginMode);
+  document.querySelector("#client-login-tab").classList.toggle("is-active", loginMode);
+  document.querySelector("#client-register-tab").classList.toggle("is-active", !loginMode);
+  setStatus(loginStatus, "");
+}
+
+document.querySelector("#client-login-tab").addEventListener("click", () => setAuthMode("login"));
+document.querySelector("#client-register-tab").addEventListener("click", () => setAuthMode("register"));
 
 loginForm.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -927,12 +988,83 @@ loginForm.addEventListener("submit", async (event) => {
     });
 
     saveSession(data);
+    portalApi({ action: "log_login" }).catch(() => {});
     await loadDashboard();
   } catch {
     clearSession();
     setStatus(
       loginStatus,
       "Не удалось войти. Проверь email и пароль или уточни доступ у студии.",
+      "error"
+    );
+  } finally {
+    button.disabled = false;
+  }
+});
+
+registerForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+
+  const email = document.querySelector("#client-register-email").value.trim().toLowerCase();
+  const password = document.querySelector("#client-register-password").value;
+  const repeat = document.querySelector("#client-register-password-repeat").value;
+  const button = registerForm.querySelector('button[type="submit"]');
+
+  if (password !== repeat) {
+    setStatus(loginStatus, "Пароли не совпадают.", "error");
+    return;
+  }
+
+  if (
+    password.length < 10 ||
+    !/[A-Za-z]/.test(password) ||
+    !/[0-9]/.test(password)
+  ) {
+    setStatus(loginStatus, "Пароль: минимум 10 символов, буква и цифра.", "error");
+    return;
+  }
+
+  button.disabled = true;
+  setStatus(loginStatus, "Проверяю заявку и создаю кабинет…");
+
+  try {
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/client-register`, {
+      method: "POST",
+      headers: {
+        apikey: SUPABASE_KEY,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ email, password })
+    });
+
+    const result = await response.json().catch(() => ({}));
+
+    if (!response.ok || !result?.ok) {
+      throw new Error(result?.error || `HTTP ${response.status}`);
+    }
+
+    const session = await authRequest("/auth/v1/token?grant_type=password", {
+      method: "POST",
+      body: JSON.stringify({ email, password })
+    });
+
+    saveSession(session);
+    portalApi({ action: "log_login" }).catch(() => {});
+    registerForm.reset();
+    await loadDashboard();
+  } catch (error) {
+    const messages = {
+      request_not_found: "Заявка с таким email не найдена. Используйте email, указанный при отправке заявки.",
+      already_registered: "Для этого email кабинет уже создан. Войдите через вкладку «Войти».",
+      reserved_admin_account: "Этот email нельзя использовать для клиентского кабинета.",
+      account_exists: "Для этого email уже существует учётная запись. Напишите нам, чтобы восстановить доступ.",
+      weak_password: "Пароль: минимум 10 символов, буква и цифра.",
+      invalid_email: "Проверьте email."
+    };
+
+    setStatus(
+      loginStatus,
+      messages[error.message] || "Не удалось создать кабинет. Попробуйте ещё раз.",
       "error"
     );
   } finally {
