@@ -19,6 +19,8 @@ const clientHtml = read("client/index.html");
 assert(/noindex/i.test(clientHtml), "client/index.html: missing noindex");
 assert(/<button\b[^>]*type=["'][^"']+["']/i.test(clientHtml), "client/index.html: buttons missing type");
 assert(read("client/client.js").includes("client-portal"), "client/client.js: portal API missing");
+assert(read("client/client.js").includes("client-register"), "client self registration missing");
+assert(read("client/index.html").includes('id="client-register-form"'), "client registration form missing");
 assert(read("client/client.js").includes("client-workspace-tabs"), "client collaboration tabs missing");
 assert(read("client/client.js").includes("prepare_upload"), "client signed upload flow missing");
 assert(read("admin/index.html").includes('id="project-collab-panel"'), "admin collaboration panel missing");
@@ -140,6 +142,7 @@ for (const file of publicPages) {
 
 const requestHtml = read("request.html");
 assert(/name=["']consent["']/i.test(requestHtml), "request.html: privacy consent missing");
+assert(/name=["']email["']/i.test(requestHtml), "request.html: dedicated client email missing");
 assert(requestHtml.includes("privacy.html"), "request.html: privacy link missing");
 assert(read("script.js").includes("consent: Boolean"), "script.js: consent is not sent to server");
 
@@ -246,6 +249,7 @@ if (process.env.QA_PRODUCTION === "1") {
     assert(health?.checks?.database?.ok === true, "health-check: database failed");
     assert(health?.checks?.content?.ok === true, "health-check: content API failed");
     assert(health?.checks?.client_portal?.ok === true, "health-check: client portal failed");
+    assert(health?.checks?.client_register?.ok === true, "health-check: client registration failed");
     assert(health?.checks?.form?.ok === true, "health-check: form failed");
     assert(health?.checks?.telegram?.ok === true, "health-check: Telegram failed");
   } catch (error) {
