@@ -49,6 +49,7 @@ jobs:
           Write-Host "Site: OK"
           Write-Host "Database: $($health.checks.database.ok)"
           Write-Host "Content API: $($health.checks.content.ok)"
+          Write-Host "Client Portal: $($health.checks.client_portal.ok)"
           Write-Host "Form: $($health.checks.form.ok)"
           Write-Host "Telegram: $($health.checks.telegram.ok)"
 
@@ -65,7 +66,7 @@ jobs:
               `Проверка: ${new Date().toISOString()}`,
               `Workflow: ${runUrl}`,
               '',
-              'Проверяются: GitHub Pages, Supabase/БД, публичный Content API, endpoint формы заявки и Telegram webhook.'
+              'Проверяются: GitHub Pages, Supabase/БД, Content API, клиентский API, endpoint формы заявки и Telegram webhook.'
             ].join('\n');
 
             const { data: issues } = await github.rest.issues.listForRepo({
