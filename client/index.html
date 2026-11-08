@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#F4F0E7">
+  <title>Клиентский кабинет — Tools for your work</title>
+  <meta name="robots" content="noindex,nofollow">
+  <link rel="icon" type="image/svg+xml" href="../favicon.svg">
+  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="client.css">
+</head>
+<body>
+  <main class="client-shell">
+    <section class="client-login" id="client-login-view">
+      <div class="client-mark" aria-hidden="true">
+        <span></span><i></i><b></b>
+      </div>
+      <p class="eyebrow">Клиентский кабинет</p>
+      <h1>Ваши проекты</h1>
+      <p class="client-lead">Закрытая зона с текущими проектами, статусами и материалами.</p>
+
+      <form class="client-form" id="client-login-form">
+        <label>
+          <span>Email</span>
+          <input id="client-email" type="email" autocomplete="username" required>
+        </label>
+        <label>
+          <span>Пароль</span>
+          <input id="client-password" type="password" autocomplete="current-password" required minlength="10">
+        </label>
+        <button class="btn primary" type="submit">Войти</button>
+      </form>
+
+      <p class="client-status" id="client-login-status" role="status"></p>
+      <a class="client-back" href="../index.html">← На сайт</a>
+    </section>
+
+    <section class="client-dashboard is-hidden" id="client-dashboard-view">
+      <header class="client-topbar">
+        <div>
+          <p class="eyebrow">Клиентский кабинет</p>
+          <h1 id="client-heading">Ваши проекты</h1>
+          <p class="client-user" id="client-user"></p>
+        </div>
+        <div class="client-top-actions">
+          <a class="client-ghost" href="../index.html" target="_blank" rel="noopener">Открыть сайт</a>
+          <button class="client-ghost" id="client-logout" type="button">Выйти</button>
+        </div>
+      </header>
+
+      <section class="client-password-panel is-hidden" id="client-password-panel">
+        <div>
+          <p class="eyebrow">Первый вход</p>
+          <h2>Смените временный пароль</h2>
+          <p>Новый пароль: минимум 10 символов, хотя бы одна буква и одна цифра.</p>
+        </div>
+        <form class="client-password-form" id="client-password-form">
+          <label>
+            <span>Новый пароль</span>
+            <input id="client-new-password" type="password" autocomplete="new-password" minlength="10" required>
+          </label>
+          <label>
+            <span>Повторите пароль</span>
+            <input id="client-new-password-repeat" type="password" autocomplete="new-password" minlength="10" required>
+          </label>
+          <button class="btn primary" type="submit">Сохранить новый пароль</button>
+        </form>
+        <p class="client-status" id="client-password-status" role="status"></p>
+      </section>
+
+      <section id="client-projects-section">
+        <div class="client-section-head">
+          <div>
+            <p class="eyebrow">Проекты</p>
+            <h2>Доступные вам</h2>
+          </div>
+          <button class="client-ghost" id="client-refresh" type="button">Обновить</button>
+        </div>
+
+        <div class="client-projects" id="client-projects"></div>
+        <p class="client-status" id="client-dashboard-status" role="status"></p>
+      </section>
+    </section>
+  </main>
+
+  <script src="client.js"></script>
+</body>
+</html>
