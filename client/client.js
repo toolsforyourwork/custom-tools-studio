@@ -4,6 +4,7 @@ const SUPABASE_KEY = "sb_publishable_FQaK_TPRAjA1NMcVG9zqzw_VFvqaRXk";
 const TOKEN_KEY = "custom_tools_client_access_token";
 const REFRESH_KEY = "custom_tools_client_refresh_token";
 const EMAIL_KEY = "custom_tools_client_email";
+const PENDING_EMAIL_KEY = "custom_tools_client_pending_email";
 
 const STATUS_LABELS = {
   concept: "Концепт",
@@ -39,6 +40,21 @@ const registerForm = document.querySelector("#client-register-form");
 
 const projectCards = new Map();
 let dashboardProjects = [];
+
+function showVerificationBox(email = "") {
+  const box = document.querySelector("#client-verification-box");
+  if (!box) return;
+
+  if (email) {
+    sessionStorage.setItem(PENDING_EMAIL_KEY, email);
+  }
+
+  box.classList.remove("is-hidden");
+}
+
+function hideVerificationBox() {
+  document.querySelector("#client-verification-box")?.classList.add("is-hidden");
+}
 
 function setStatus(element, message, type = "") {
   element.textContent = message;
@@ -972,6 +988,7 @@ function setAuthMode(mode) {
   const loginMode = mode === "login";
   loginForm.classList.toggle("is-hidden", !loginMode);
   registerForm.classList.toggle("is-hidden", loginMode);
+  if (!loginMode) hideVerificationBox();
   document.querySelector("#client-login-tab").classList.toggle("is-active", loginMode);
   document.querySelector("#client-register-tab").classList.toggle("is-active", !loginMode);
   setStatus(loginStatus, "");
@@ -999,13 +1016,26 @@ loginForm.addEventListener("submit", async (event) => {
     saveSession(data);
     portalApi({ action: "log_login" }).catch(() => {});
     await loadDashboard();
-  } catch {
+  } catch (error) {
     clearSession();
-    setStatus(
-      loginStatus,
-      "Не удалось войти. Проверь email и пароль или уточни доступ у студии.",
-      "error"
-    );
+
+    const message = String(error?.message || "").toLowerCase();
+
+    if (message.includes("email not confirmed")) {
+      showVerificationBox(email);
+      sessionStorage.setItem(PENDING_EMAIL_KEY, email);
+      setStatus(
+        loginStatus,
+        "Сначала подтвердите email по ссылке из письма.",
+        "error"
+      );
+    } else {
+      setStatus(
+        loginStatus,
+        "Не удалось войти. Проверь email и пароль или уточни доступ у студии.",
+        "error"
+      );
+    }
   } finally {
     button.disabled = false;
   }
@@ -1052,21 +1082,23 @@ registerForm.addEventListener("submit", async (event) => {
       throw new Error(result?.error || `HTTP ${response.status}`);
     }
 
-    const session = await authRequest("/auth/v1/token?grant_type=password", {
-      method: "POST",
-      body: JSON.stringify({ email, password })
-    });
-
-    saveSession(session);
-    portalApi({ action: "log_login" }).catch(() => {});
     registerForm.reset();
-    await loadDashboard();
+    showVerificationBox(email);
+    document.querySelector("#client-email").value = email;
+    setStatus(
+      loginStatus,
+      "Письмо отправлено. Подтвердите email, затем войдите в кабинет.",
+      "success"
+    );
   } catch (error) {
     const messages = {
       request_not_found: "Заявка с таким email не найдена. Используйте email, указанный при отправке заявки.",
       already_registered: "Для этого email кабинет уже создан. Войдите через вкладку «Войти».",
       reserved_admin_account: "Этот email нельзя использовать для клиентского кабинета.",
       account_exists: "Для этого email уже существует учётная запись. Напишите нам, чтобы восстановить доступ.",
+      email_confirmation_not_enforced: "Подтверждение email временно недоступно. Мы уже зафиксировали проблему.",
+      email_rate_limited: "Письма отправлялись слишком часто. Попробуйте немного позже.",
+      rate_limited: "Слишком много попыток регистрации. Попробуйте немного позже.",
       weak_password: "Пароль: минимум 10 символов, буква и цифра.",
       invalid_email: "Проверьте email."
     };
@@ -1074,6 +1106,63 @@ registerForm.addEventListener("submit", async (event) => {
     setStatus(
       loginStatus,
       messages[error.message] || "Не удалось создать кабинет. Попробуйте ещё раз.",
+      "error"
+    );
+  } finally {
+    button.disabled = false;
+  }
+});
+
+document.querySelector("#client-resend-confirmation")?.addEventListener("click", async () => {
+  const email =
+    sessionStorage.getItem(PENDING_EMAIL_KEY) ||
+    document.querySelector("#client-register-email")?.value.trim().toLowerCase() ||
+    document.querySelector("#client-email")?.value.trim().toLowerCase() ||
+    "";
+
+  const button = document.querySelector("#client-resend-confirmation");
+
+  if (!email) {
+    setStatus(loginStatus, "Сначала укажите email из заявки.", "error");
+    return;
+  }
+
+  button.disabled = true;
+  setStatus(loginStatus, "Отправляю письмо ещё раз…");
+
+  try {
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/client-register`, {
+      method: "POST",
+      headers: {
+        apikey: SUPABASE_KEY,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        action: "resend",
+        email
+      })
+    });
+
+    const result = await response.json().catch(() => ({}));
+
+    if (!response.ok || !result?.ok) {
+      throw new Error(result?.error || `HTTP ${response.status}`);
+    }
+
+    showVerificationBox(email);
+    setStatus(loginStatus, "Письмо отправлено повторно.", "success");
+  } catch (error) {
+    const messages = {
+      request_not_found: "Заявка с таким email не найдена.",
+      registration_not_started: "Сначала начните регистрацию.",
+      already_registered: "Кабинет уже активирован — попробуйте войти.",
+      email_rate_limited: "Письма отправлялись слишком часто. Попробуйте немного позже.",
+      rate_limited: "Слишком много попыток. Попробуйте немного позже."
+    };
+
+    setStatus(
+      loginStatus,
+      messages[error.message] || "Не удалось повторно отправить письмо.",
       "error"
     );
   } finally {
@@ -1157,7 +1246,60 @@ window.setInterval(() => {
   }
 }, 30000);
 
+function adoptConfirmationSessionFromHash() {
+  const hash = window.location.hash.startsWith("#")
+    ? window.location.hash.slice(1)
+    : "";
+
+  if (!hash) return false;
+
+  const params = new URLSearchParams(hash);
+  const accessToken = params.get("access_token");
+  const refreshToken = params.get("refresh_token");
+  const errorCode = params.get("error_code");
+  const errorDescription = params.get("error_description");
+
+  if (errorCode) {
+    history.replaceState({}, document.title, window.location.pathname + window.location.search);
+    setAuthMode("login");
+    setStatus(
+      loginStatus,
+      errorDescription
+        ? decodeURIComponent(errorDescription.replace(/\+/g, " "))
+        : "Не удалось подтвердить email.",
+      "error"
+    );
+    return false;
+  }
+
+  if (!accessToken || !refreshToken) return false;
+
+  saveSession({
+    access_token: accessToken,
+    refresh_token: refreshToken,
+    user: {
+      email: sessionStorage.getItem(PENDING_EMAIL_KEY) || ""
+    }
+  });
+
+  sessionStorage.removeItem(PENDING_EMAIL_KEY);
+  history.replaceState({}, document.title, window.location.pathname + window.location.search);
+  return true;
+}
+
 (async () => {
+  const confirmationSession = adoptConfirmationSessionFromHash();
+
+  if (confirmationSession) {
+    try {
+      await portalApi({ action: "log_login" });
+      await loadDashboard();
+      return;
+    } catch {
+      clearSession();
+    }
+  }
+
   if (!token()) return;
 
   try {
