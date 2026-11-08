@@ -20,6 +20,11 @@
       <h1>Ваши проекты</h1>
       <p class="client-lead">Закрытая зона с текущими проектами, статусами и материалами.</p>
 
+      <div class="client-auth-tabs">
+        <button class="client-auth-tab is-active" id="client-login-tab" type="button">Войти</button>
+        <button class="client-auth-tab" id="client-register-tab" type="button">Регистрация</button>
+      </div>
+
       <form class="client-form" id="client-login-form">
         <label>
           <span>Email</span>
@@ -30,6 +35,23 @@
           <input id="client-password" type="password" autocomplete="current-password" required minlength="10">
         </label>
         <button class="btn primary" type="submit">Войти</button>
+      </form>
+
+      <form class="client-form is-hidden" id="client-register-form">
+        <p class="client-register-note">Регистрация доступна только после отправки заявки. Используйте тот же email, который указали в заявке.</p>
+        <label>
+          <span>Email из заявки</span>
+          <input id="client-register-email" type="email" autocomplete="email" required>
+        </label>
+        <label>
+          <span>Пароль</span>
+          <input id="client-register-password" type="password" autocomplete="new-password" minlength="10" required>
+        </label>
+        <label>
+          <span>Повторите пароль</span>
+          <input id="client-register-password-repeat" type="password" autocomplete="new-password" minlength="10" required>
+        </label>
+        <button class="btn primary" type="submit">Создать кабинет</button>
       </form>
 
       <p class="client-status" id="client-login-status" role="status"></p>
@@ -67,6 +89,16 @@
           <button class="btn primary" type="submit">Сохранить новый пароль</button>
         </form>
         <p class="client-status" id="client-password-status" role="status"></p>
+      </section>
+
+      <section class="client-requests-section" id="client-requests-section">
+        <div class="client-section-head">
+          <div>
+            <p class="eyebrow">Заявки</p>
+            <h2>Что происходит сейчас</h2>
+          </div>
+        </div>
+        <div class="client-requests" id="client-requests"></div>
       </section>
 
       <section id="client-projects-section">
