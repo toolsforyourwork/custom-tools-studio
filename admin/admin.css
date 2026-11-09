@@ -1403,3 +1403,58 @@
     grid-template-columns:1fr 1fr;
   }
 }
+
+.crm-edit-form{
+  display:grid;
+  gap:14px;
+  margin-top:16px;
+  padding:16px;
+  border:1px solid rgba(100,125,175,.22);
+  border-radius:15px;
+  background:rgba(100,125,175,.055);
+}
+.crm-edit-grid{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:12px;
+}
+.crm-edit-form label{
+  display:grid;
+  gap:7px;
+  font-size:13px;
+}
+.crm-edit-form input,
+.crm-edit-form textarea{
+  width:100%;
+  padding:11px 13px;
+  border:1px solid rgba(46,42,37,.16);
+  border-radius:12px;
+  background:var(--bg);
+  color:var(--ink);
+  font:inherit;
+}
+.crm-edit-form textarea{
+  resize:vertical;
+  min-height:110px;
+}
+.crm-edit-form input:focus,
+.crm-edit-form textarea:focus{
+  outline:none;
+  border-color:var(--blue);
+  box-shadow:0 0 0 3px rgba(100,125,175,.13);
+}
+.crm-edit-message{
+  grid-column:1/-1;
+}
+.crm-edit-actions{
+  display:flex;
+  justify-content:flex-end;
+  align-items:center;
+  gap:9px;
+  flex-wrap:wrap;
+}
+@media(max-width:760px){
+  .crm-edit-grid{
+    grid-template-columns:1fr;
+  }
+}
