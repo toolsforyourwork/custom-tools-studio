@@ -1034,7 +1034,7 @@ async function loadHealth() {
     overallDot.classList.add("is-loading");
   }
   if (overallText) overallText.textContent = "Проверяем…";
-  setStatus(status, "Проверяем сайт, базу, клиентский кабинет, регистрацию, форму и Telegram…");
+  setStatus(status, "Проверяем сайт, базу, CRM, клиентский кабинет, регистрацию, форму и Telegram…");
 
   try {
     const response = await fetch(
@@ -1063,6 +1063,7 @@ async function loadHealth() {
         ? "Работает · подтверждение включено"
         : "Ошибка конфигурации"
     );
+    setHealthCard("#health-admin-crm", data.checks.admin_crm, "Работает · доступ закрыт");
     setHealthCard(
       "#health-form",
       data.checks.form,
@@ -1097,7 +1098,7 @@ async function loadHealth() {
       data.ok ? "success" : "error"
     );
   } catch (error) {
-    for (const id of ["#health-site","#health-database","#health-content","#health-client-portal","#health-client-register","#health-form","#health-telegram"]) {
+    for (const id of ["#health-site","#health-database","#health-content","#health-client-portal","#health-client-register","#health-admin-crm","#health-form","#health-telegram"]) {
       const card = document.querySelector(id);
       card?.classList.remove("is-loading", "is-ok");
       card?.classList.add("is-error");
