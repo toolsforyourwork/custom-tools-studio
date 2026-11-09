@@ -91,11 +91,11 @@
           <span class="resource-value">Скоро</span>
         </a>
 
-        <a class="resource-card reveal" data-resource="email" href="#">
+        <a class="resource-card reveal" data-resource="email" href="#email" data-email-chooser>
           <div class="small">04 / напрямую</div>
           <h2>Email</h2>
           <p>Для писем, предложений и прямой связи.</p>
-          <span class="resource-value">Скоро</span>
+          <span class="resource-value">Выбрать почту →</span>
         </a>
 
         <a class="resource-card reveal" href="client/">
@@ -121,11 +121,46 @@
           <h2>customstudioai@gmail.com</h2>
           <p>Заявки удобнее отправлять через форму — так они сразу попадают в нашу систему. По общим вопросам можно написать напрямую.</p>
         </div>
-        <a class="btn ghost" href="mailto:customstudioai@gmail.com">Написать письмо</a>
+        <button class="btn ghost" type="button" data-email-chooser>Написать письмо</button>
       </div>
     </div>
   </section>
 </main>
+
+<div class="mail-chooser is-hidden" id="mail-chooser" aria-hidden="true">
+  <div class="mail-chooser__backdrop" data-mail-close></div>
+  <div class="mail-chooser__dialog" role="dialog" aria-modal="true" aria-labelledby="mail-chooser-title">
+    <button class="mail-chooser__close" type="button" data-mail-close aria-label="Закрыть">×</button>
+    <div class="eyebrow">написать нам</div>
+    <h2 id="mail-chooser-title">Через какую почту открыть письмо?</h2>
+    <p class="mail-chooser__lead">Мы подставим адрес студии. Если в выбранной почте ты уже авторизован, сразу откроется новое письмо.</p>
+
+    <div class="mail-chooser__grid">
+      <a class="mail-option" data-mail-provider="gmail" target="_blank" rel="noopener noreferrer">
+        <strong>Gmail</strong>
+        <span>Открыть новое письмо в Gmail</span>
+      </a>
+      <a class="mail-option" data-mail-provider="outlook" target="_blank" rel="noopener noreferrer">
+        <strong>Outlook</strong>
+        <span>Открыть Outlook в браузере</span>
+      </a>
+      <a class="mail-option" data-mail-provider="yandex" target="_blank" rel="noopener noreferrer">
+        <strong>Яндекс Почта</strong>
+        <span>Открыть форму нового письма</span>
+      </a>
+      <a class="mail-option" data-mail-provider="mailru" target="_blank" rel="noopener noreferrer">
+        <strong>Mail.ru</strong>
+        <span>Открыть форму нового письма</span>
+      </a>
+      <button class="mail-option mail-option--copy" type="button" data-mail-copy>
+        <strong>Скопировать email</strong>
+        <span>customstudioai@gmail.com</span>
+      </button>
+    </div>
+
+    <p class="mail-chooser__status" id="mail-copy-status" role="status"></p>
+  </div>
+</div>
 
 <footer class="footer">
   <div class="container footer__inner">
