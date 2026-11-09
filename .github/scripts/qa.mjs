@@ -27,6 +27,8 @@ assert(read("client/client.js").includes("client-workspace-tabs"), "client colla
 assert(read("client/client.js").includes("prepare_upload"), "client signed upload flow missing");
 assert(read("admin/index.html").includes('id="project-collab-panel"'), "admin collaboration panel missing");
 assert(read("admin/index.html").includes('id="crm-panel"'), "admin CRM panel missing");
+assert(read("admin/index.html").includes('id="admin-invite-form"'), "admin invite form missing");
+assert(read("admin/admin.js").includes("admin-register"), "admin invite registration client missing");
 assert(read("admin/admin.js").includes("admin-crm"), "admin CRM API client missing");
 assert(read("admin/admin.js").includes('action: "update_request"'), "CRM request editor missing");
 assert(read("admin/admin.js").includes('"create_approval"'), "admin approval flow missing");
