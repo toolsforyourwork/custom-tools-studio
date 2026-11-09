@@ -1450,6 +1450,94 @@ function createCrmStatusButton(request, nextStatus, label) {
   return button;
 }
 
+function createCrmEditForm(request) {
+  const form = document.createElement("form");
+  form.className = "crm-edit-form is-hidden";
+
+  const grid = document.createElement("div");
+  grid.className = "crm-edit-grid";
+
+  function createField(labelText, type, value, maxLength) {
+    const label = document.createElement("label");
+    const caption = document.createElement("span");
+    caption.textContent = labelText;
+
+    const input = document.createElement("input");
+    input.type = type;
+    input.value = value || "";
+    input.maxLength = maxLength;
+    input.required = true;
+
+    label.append(caption, input);
+    return { label, input };
+  }
+
+  const nameField = createField("Имя", "text", request.name, 120);
+  const emailField = createField("Email", "email", request.email, 254);
+  const contactField = createField("Контакт", "text", request.contact, 240);
+
+  grid.append(nameField.label, emailField.label, contactField.label);
+
+  const messageLabel = document.createElement("label");
+  messageLabel.className = "crm-edit-message";
+  const messageCaption = document.createElement("span");
+  messageCaption.textContent = "Текст заявки";
+  const messageInput = document.createElement("textarea");
+  messageInput.rows = 5;
+  messageInput.maxLength = 5000;
+  messageInput.required = true;
+  messageInput.value = request.message || "";
+  messageLabel.append(messageCaption, messageInput);
+
+  const actions = document.createElement("div");
+  actions.className = "crm-edit-actions";
+
+  const cancel = document.createElement("button");
+  cancel.type = "button";
+  cancel.className = "admin-mini";
+  cancel.textContent = "Отмена";
+
+  const save = document.createElement("button");
+  save.type = "submit";
+  save.className = "button";
+  save.textContent = "Сохранить";
+
+  actions.append(cancel, save);
+  form.append(grid, messageLabel, actions);
+
+  cancel.addEventListener("click", () => {
+    form.classList.add("is-hidden");
+  });
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    if (!form.reportValidity()) return;
+
+    const status = document.querySelector("#crm-status");
+    save.disabled = true;
+    setStatus(status, "Сохраняю заявку…");
+
+    try {
+      await crmApi({
+        action: "update_request",
+        id: request.id,
+        name: nameField.input.value.trim(),
+        email: emailField.input.value.trim(),
+        contact: contactField.input.value.trim(),
+        message: messageInput.value.trim()
+      });
+
+      await loadCrm();
+      setStatus(status, "Заявка сохранена.", "success");
+    } catch (error) {
+      setStatus(status, `Ошибка: ${error.message}`, "error");
+      save.disabled = false;
+    }
+  });
+
+  return form;
+}
+
 function renderCrmRequests() {
   const root = document.querySelector("#crm-list");
   root.replaceChildren();
@@ -1533,6 +1621,12 @@ function renderCrmRequests() {
       contacts.appendChild(copy);
     }
 
+    const editButton = document.createElement("button");
+    editButton.type = "button";
+    editButton.className = "admin-mini";
+    editButton.textContent = "Редактировать";
+    contacts.appendChild(editButton);
+
     head.append(identity, contacts);
 
     const body = document.createElement("div");
@@ -1569,7 +1663,13 @@ function renderCrmRequests() {
       : "Кабинет ещё не привязан";
 
     footer.append(actions, registration);
-    card.append(head, body, footer);
+
+    const editForm = createCrmEditForm(request);
+    editButton.addEventListener("click", () => {
+      editForm.classList.toggle("is-hidden");
+    });
+
+    card.append(head, body, editForm, footer);
     root.appendChild(card);
   }
 }
