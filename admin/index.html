@@ -65,6 +65,47 @@
         </div>
       </div>
 
+      <section class="admin-crm" id="crm-panel">
+        <div class="admin-panel-head">
+          <div>
+            <p class="eyebrow">CRM</p>
+            <h2>Заявки</h2>
+          </div>
+          <button class="admin-ghost" id="crm-refresh-button" type="button">Обновить</button>
+        </div>
+
+        <div class="crm-summary">
+          <button type="button" class="crm-summary-card is-active" data-crm-status="new">
+            <strong id="crm-count-new">0</strong>
+            <span>Новые</span>
+          </button>
+          <button type="button" class="crm-summary-card" data-crm-status="in_progress">
+            <strong id="crm-count-work">0</strong>
+            <span>В работе</span>
+          </button>
+          <button type="button" class="crm-summary-card" data-crm-status="replied">
+            <strong id="crm-count-replied">0</strong>
+            <span>Ответили</span>
+          </button>
+          <button type="button" class="crm-summary-card" data-crm-status="closed">
+            <strong id="crm-count-closed">0</strong>
+            <span>Выполненные</span>
+          </button>
+          <button type="button" class="crm-summary-card" data-crm-status="all">
+            <strong>∞</strong>
+            <span>Все</span>
+          </button>
+        </div>
+
+        <div class="crm-toolbar">
+          <input id="crm-search" type="search" placeholder="Поиск по имени, email, контакту или тексту заявки">
+          <span class="client-admin-muted" id="crm-current-filter">Новые заявки</span>
+        </div>
+
+        <div class="crm-list" id="crm-list"></div>
+        <p class="admin-status" id="crm-status" role="status"></p>
+      </section>
+
       <section class="admin-clients" id="clients-panel">
         <div class="admin-panel-head">
           <div>
