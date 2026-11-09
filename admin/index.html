@@ -33,6 +33,27 @@
         <button class="button admin-submit" type="submit">Войти</button>
       </form>
 
+      <div class="admin-invite-entry">
+        <button class="admin-ghost" id="show-admin-invite" type="button">Активировать приглашение</button>
+      </div>
+
+      <form id="admin-invite-form" class="admin-form admin-invite-form is-hidden">
+        <label>
+          <span>Email приглашения</span>
+          <input id="admin-invite-email" type="email" autocomplete="email" required>
+        </label>
+        <label>
+          <span>Придумай пароль</span>
+          <input id="admin-invite-password" type="password" autocomplete="new-password" required minlength="10">
+        </label>
+        <label>
+          <span>Повтори пароль</span>
+          <input id="admin-invite-password-confirm" type="password" autocomplete="new-password" required minlength="10">
+        </label>
+        <button class="button admin-submit" type="submit">Создать доступ</button>
+        <p class="admin-status" id="admin-invite-status" role="status"></p>
+      </form>
+
       <p class="admin-status" id="login-status" role="status"></p>
       <a class="admin-back" href="../index.html">← На сайт</a>
     </section>
