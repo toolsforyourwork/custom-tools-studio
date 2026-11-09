@@ -146,6 +146,11 @@ const requestHtml = read("request.html");
 assert(/name=["']consent["']/i.test(requestHtml), "request.html: privacy consent missing");
 assert(/name=["']email["']/i.test(requestHtml), "request.html: dedicated client email missing");
 assert(requestHtml.includes("privacy.html"), "request.html: privacy link missing");
+assert(requestHtml.includes('name="service"'), "request.html: request topic selector missing");
+assert(read("script.js").includes("REQUEST_TOPICS"), "script.js: request topic handling missing");
+assert(read("index.html").includes("Отдельная платная услуга"), "index.html: paid Check-Up missing");
+assert(read("index.html").includes("Бесплатный аудит рабочих процессов"), "index.html: contract audit offer missing");
+assert(read("script.js").includes("mailto:customstudioai@gmail.com"), "script.js: studio email missing");
 assert(read("script.js").includes("consent: Boolean"), "script.js: consent is not sent to server");
 
 const adminHtml = read("admin/index.html");
