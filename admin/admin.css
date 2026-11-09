@@ -1458,3 +1458,22 @@
     grid-template-columns:1fr;
   }
 }
+
+.admin-invite-entry{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin-top:18px;
+  padding-top:18px;
+  border-top:1px solid rgba(46,42,37,.1);
+}
+.admin-invite-form{
+  margin-top:16px;
+  padding:16px;
+  border:1px solid rgba(100,125,175,.2);
+  border-radius:16px;
+  background:rgba(100,125,175,.055);
+}
+.admin-invite-form .admin-status{
+  margin-top:0;
+}
