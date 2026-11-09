@@ -63,7 +63,7 @@
     <div class="container">
       <div class="eyebrow">заявка</div>
       <h1>Расскажите, что нужно упростить</h1>
-      <p>Имя, удобный контакт и несколько предложений о задаче — этого достаточно.</p>
+      <p>Выберите направление, оставьте email для клиентского кабинета и опишите задачу. Мы получим обращение в CRM.</p>
     </div>
   </section>
 
@@ -83,6 +83,15 @@
               <input name="website" tabindex="-1" autocomplete="off">
             </label>
           </div>
+          <label class="form-label" for="request-topic">Направление запроса</label>
+          <select class="field" id="request-topic" name="service" required>
+            <option value="" selected disabled>Выберите направление</option>
+            <option value="excel">Excel и макросы</option>
+            <option value="checkup">Check-Up вашего бизнеса — отдельная платная услуга</option>
+            <option value="development">Разработка: CRM, боты, AI и интеграции</option>
+            <option value="contract-audit">Разработка с бесплатным аудитом при заключении договора</option>
+            <option value="other">Другое / пока не знаю</option>
+          </select>
           <input class="field" name="name" placeholder="Имя" aria-label="Имя" autocomplete="name" required>
           <input class="field" name="email" type="email" placeholder="Email для клиентского кабинета" aria-label="Email" autocomplete="email" required>
           <input class="field" name="contact" placeholder="Telegram / Instagram / другой удобный контакт" aria-label="Контакт для ответа" autocomplete="off" required>
@@ -116,7 +125,8 @@
         <article class="card reveal">
           <div class="small">03</div>
           <h3>Отслеживание в кабинете</h3>
-          <p>По email из заявки можно зарегистрироваться в клиентском кабинете и видеть статус заявки, а затем — проект, файлы, обсуждение и согласования.</p>
+          <p>После заявки можно зарегистрироваться по тому же email и подтвердить почту. В кабинете будет виден статус обращения, а назначенный проект — вместе с файлами, обсуждением и согласованиями.</p>
+          <a class="text-link" href="client/">Открыть клиентский кабинет →</a>
         </article>
       </div>
     </div>
