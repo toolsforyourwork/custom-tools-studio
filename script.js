@@ -415,6 +415,109 @@ async function loadProjects() {
 loadProjects();
 
 
+
+const STUDIO_EMAIL = "customstudioai@gmail.com";
+const STUDIO_MAIL_SUBJECT = "Вопрос для Tools for your work";
+const mailChooser = document.getElementById("mail-chooser");
+const mailCopyStatus = document.getElementById("mail-copy-status");
+let mailChooserReturnFocus = null;
+
+function studioMailtoUri() {
+  return `mailto:${STUDIO_EMAIL}?subject=${encodeURIComponent(STUDIO_MAIL_SUBJECT)}`;
+}
+
+function webmailComposeUrl(provider) {
+  const email = encodeURIComponent(STUDIO_EMAIL);
+  const subject = encodeURIComponent(STUDIO_MAIL_SUBJECT);
+  const mailto = encodeURIComponent(studioMailtoUri());
+
+  switch (provider) {
+    case "gmail":
+      return `https://mail.google.com/mail/?view=cm&fs=1&to=${email}&su=${subject}`;
+    case "outlook":
+      return `https://outlook.live.com/mail/0/deeplink/compose?to=${email}&subject=${subject}`;
+    case "yandex":
+      return `https://mail.yandex.ru/compose?mailto=${mailto}`;
+    case "mailru":
+      return `https://e.mail.ru/compose/?mailto=${mailto}`;
+    default:
+      return "";
+  }
+}
+
+function closeMailChooser() {
+  if (!mailChooser) return;
+  mailChooser.classList.add("is-hidden");
+  mailChooser.setAttribute("aria-hidden", "true");
+  document.body.classList.remove("mail-chooser-open");
+  if (mailCopyStatus) mailCopyStatus.textContent = "";
+  mailChooserReturnFocus?.focus?.();
+  mailChooserReturnFocus = null;
+}
+
+function openMailChooser(trigger) {
+  if (!mailChooser) return;
+  mailChooserReturnFocus = trigger || document.activeElement;
+  mailChooser.classList.remove("is-hidden");
+  mailChooser.setAttribute("aria-hidden", "false");
+  document.body.classList.add("mail-chooser-open");
+  mailChooser.querySelector("[data-mail-provider]")?.focus();
+  trackSiteEvent("email_chooser_open");
+}
+
+document.querySelectorAll("[data-email-chooser]").forEach(trigger => {
+  trigger.addEventListener("click", event => {
+    event.preventDefault();
+    openMailChooser(trigger);
+  });
+});
+
+mailChooser?.querySelectorAll("[data-mail-provider]").forEach(link => {
+  const provider = link.dataset.mailProvider || "";
+  link.href = webmailComposeUrl(provider);
+  link.addEventListener("click", () => {
+    trackSiteEvent("email_provider_select", { event_value: provider });
+    closeMailChooser();
+  });
+});
+
+mailChooser?.querySelectorAll("[data-mail-close]").forEach(button => {
+  button.addEventListener("click", closeMailChooser);
+});
+
+document.addEventListener("keydown", event => {
+  if (event.key === "Escape" && mailChooser && !mailChooser.classList.contains("is-hidden")) {
+    closeMailChooser();
+  }
+});
+
+document.querySelector("[data-mail-copy]")?.addEventListener("click", async () => {
+  let copied = false;
+
+  try {
+    await navigator.clipboard.writeText(STUDIO_EMAIL);
+    copied = true;
+  } catch {
+    const textarea = document.createElement("textarea");
+    textarea.value = STUDIO_EMAIL;
+    textarea.setAttribute("readonly", "");
+    textarea.style.position = "fixed";
+    textarea.style.opacity = "0";
+    document.body.appendChild(textarea);
+    textarea.select();
+    copied = document.execCommand("copy");
+    textarea.remove();
+  }
+
+  if (mailCopyStatus) {
+    mailCopyStatus.textContent = copied
+      ? "Email скопирован."
+      : "Не удалось скопировать. Адрес: " + STUDIO_EMAIL;
+  }
+
+  if (copied) trackSiteEvent("email_copy");
+});
+
 document.querySelectorAll("[data-year]").forEach(el=>{
   el.textContent = new Date().getFullYear();
 });
