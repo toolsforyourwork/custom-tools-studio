@@ -173,14 +173,27 @@ if (window.location.pathname.endsWith("/request.html")) {
   trackSiteEvent("request_view");
 }
 
-document.querySelectorAll('a[href$="request.html"]').forEach(link => {
+document.querySelectorAll('a[href^="request.html"]').forEach(link => {
   link.addEventListener("click", () => {
     trackSiteEvent("request_click");
   });
 });
 
+const REQUEST_TOPICS = Object.freeze({
+  excel: "Excel и макросы",
+  checkup: "Check-Up вашего бизнеса — отдельная платная услуга",
+  development: "Разработка: CRM, боты, AI и интеграции",
+  "contract-audit": "Разработка с бесплатным аудитом при заключении договора",
+  other: "Другое / пока не знаю"
+});
+
 document.querySelectorAll("form.demo-form").forEach(form=>{
   const status = form.querySelector(".form-status");
+  const topicSelect = form.elements.service;
+  const requestedTopic = new URLSearchParams(window.location.search).get("topic");
+  if (topicSelect && Object.hasOwn(REQUEST_TOPICS, requestedTopic)) {
+    topicSelect.value = requestedTopic;
+  }
 
   form.addEventListener("submit", async e=>{
     e.preventDefault();
@@ -196,6 +209,12 @@ document.querySelectorAll("form.demo-form").forEach(form=>{
       consent: Boolean(form.elements.consent?.checked)
     };
 
+    const topic = topicSelect?.value || "";
+    if (!Object.hasOwn(REQUEST_TOPICS, topic)) {
+      status.textContent = "Выберите направление запроса.";
+      return;
+    }
+
     if (!payload.name || !payload.email || !payload.contact || !payload.message) {
       status.textContent = "Заполни все поля.";
       return;
@@ -210,6 +229,8 @@ document.querySelectorAll("form.demo-form").forEach(form=>{
       status.textContent = "Нужно согласиться с обработкой данных.";
       return;
     }
+
+    payload.message = `Направление: ${REQUEST_TOPICS[topic]}\n\n${payload.message}`;
 
     button.disabled = true;
     status.textContent = "Отправляем…";
