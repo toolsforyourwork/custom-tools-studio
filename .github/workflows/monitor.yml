@@ -51,6 +51,7 @@ jobs:
           Write-Host "Content API: $($health.checks.content.ok)"
           Write-Host "Client Portal: $($health.checks.client_portal.ok)"
           Write-Host "Client Registration: $($health.checks.client_register.ok)"
+          Write-Host "Admin CRM: $($health.checks.admin_crm.ok)"
           Write-Host "Form: $($health.checks.form.ok)"
           Write-Host "Telegram: $($health.checks.telegram.ok)"
 
