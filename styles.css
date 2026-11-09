@@ -921,3 +921,14 @@ select.field{min-height:54px;cursor:pointer}
 }
 .service-card{display:flex;flex-direction:column;align-items:flex-start}
 .service-card p{flex:1}
+
+
+.case-principles{
+  margin-bottom:48px;
+}
+.case-principles .request-flow{
+  margin-top:22px;
+}
+.case-principles .card{
+  min-height:220px;
+}
