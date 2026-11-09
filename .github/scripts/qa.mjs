@@ -28,6 +28,7 @@ assert(read("client/client.js").includes("prepare_upload"), "client signed uploa
 assert(read("admin/index.html").includes('id="project-collab-panel"'), "admin collaboration panel missing");
 assert(read("admin/index.html").includes('id="crm-panel"'), "admin CRM panel missing");
 assert(read("admin/admin.js").includes("admin-crm"), "admin CRM API client missing");
+assert(read("admin/admin.js").includes('action: "update_request"'), "CRM request editor missing");
 assert(read("admin/admin.js").includes('"create_approval"'), "admin approval flow missing");
 
 const requiredProdUrls = [
