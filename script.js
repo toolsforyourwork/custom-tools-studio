@@ -140,7 +140,7 @@ const SITE_RESOURCES = {
   telegram:  { label: "", url: "" },
   instagram: { label: "", url: "" },
   behance:   { label: "", url: "" },
-  email:     { label: "", url: "" }
+  email:     { label: "customstudioai@gmail.com", url: "mailto:customstudioai@gmail.com" }
 };
 
 document.querySelectorAll("[data-resource]").forEach(link => {
