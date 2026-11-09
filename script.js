@@ -1,4 +1,25 @@
 
+(function routeAdminInviteAuth(){
+  try {
+    const params = new URLSearchParams(window.location.hash.slice(1));
+    const accessToken = params.get("access_token");
+    if (!accessToken) return;
+
+    const part = accessToken.split(".")[1];
+    if (!part) return;
+
+    const normalized = part.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = normalized + "=".repeat((4 - normalized.length % 4) % 4);
+    const bytes = Uint8Array.from(atob(padded), char => char.charCodeAt(0));
+    const payload = JSON.parse(new TextDecoder().decode(bytes));
+
+    if (payload?.user_metadata?.admin_invite === true) {
+      window.location.replace("./admin/" + window.location.hash);
+    }
+  } catch {}
+})();
+
+
 const header = document.getElementById("header");
 const menu = document.getElementById("menu");
 const nav = document.getElementById("nav");
