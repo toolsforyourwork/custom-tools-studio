@@ -26,6 +26,8 @@ assert(read("client/index.html").includes('id="client-register-form"'), "client 
 assert(read("client/client.js").includes("client-workspace-tabs"), "client collaboration tabs missing");
 assert(read("client/client.js").includes("prepare_upload"), "client signed upload flow missing");
 assert(read("admin/index.html").includes('id="project-collab-panel"'), "admin collaboration panel missing");
+assert(read("admin/index.html").includes('id="crm-panel"'), "admin CRM panel missing");
+assert(read("admin/admin.js").includes("admin-crm"), "admin CRM API client missing");
 assert(read("admin/admin.js").includes('"create_approval"'), "admin approval flow missing");
 
 const requiredProdUrls = [
@@ -257,6 +259,7 @@ if (process.env.QA_PRODUCTION === "1") {
     assert(health?.checks?.content?.ok === true, "health-check: content API failed");
     assert(health?.checks?.client_portal?.ok === true, "health-check: client portal failed");
     assert(health?.checks?.client_register?.ok === true, "health-check: client registration failed");
+    assert(health?.checks?.admin_crm?.ok === true, "health-check: admin CRM failed");
     assert(
       health?.checks?.client_register?.email_confirmation === true,
       "health-check: email confirmation is not enforced"
