@@ -37,6 +37,9 @@ const USER_KEY = "custom_tools_admin_user_id";
 let projects = [];
 let clients = [];
 let clientAuthEvents = [];
+let crmRequests = [];
+let crmFilter = "new";
+let crmSearch = "";
 let analyticsDays = 7;
 let slugWasEdited = false;
 let pendingCoverFile = null;
@@ -177,6 +180,30 @@ async function storageMaintenanceApi(body, retry = true) {
 
   if (!response.ok || data?.ok === false) {
     throw new Error(data?.error || data?.errors?.join("; ") || `HTTP ${response.status}`);
+  }
+
+  return data;
+}
+
+async function crmApi(body, retry = true) {
+  const response = await fetch(`${SUPABASE_URL}/functions/v1/admin-crm`, {
+    method: "POST",
+    headers: {
+      apikey: SUPABASE_KEY,
+      Authorization: `Bearer ${currentToken()}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(body)
+  });
+
+  if (response.status === 401 && retry && await refreshSession()) {
+    return crmApi(body, false);
+  }
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok || !data?.ok) {
+    throw new Error(data?.error || `HTTP ${response.status}`);
   }
 
   return data;
@@ -1376,6 +1403,212 @@ function clientErrorMessage(error) {
   return code || "Неизвестная ошибка";
 }
 
+const CRM_STATUS_LABELS = {
+  new: "Новая",
+  in_progress: "В работе",
+  replied: "Ответили",
+  closed: "Выполнено"
+};
+
+function crmFilterLabel(status) {
+  return {
+    new: "Новые заявки",
+    in_progress: "Заявки в работе",
+    replied: "Заявки, на которые ответили",
+    closed: "Выполненные заявки",
+    all: "Все заявки"
+  }[status] || "Заявки";
+}
+
+function createCrmStatusButton(request, nextStatus, label) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "admin-mini";
+  button.textContent = label;
+  button.disabled = request.status === nextStatus;
+
+  button.addEventListener("click", async () => {
+    const status = document.querySelector("#crm-status");
+    button.disabled = true;
+    setStatus(status, "Обновляю статус…");
+
+    try {
+      await crmApi({
+        action: "update_status",
+        id: request.id,
+        status: nextStatus
+      });
+      await loadCrm();
+      setStatus(status, "Статус заявки обновлён.", "success");
+    } catch (error) {
+      setStatus(status, `Ошибка: ${error.message}`, "error");
+      button.disabled = false;
+    }
+  });
+
+  return button;
+}
+
+function renderCrmRequests() {
+  const root = document.querySelector("#crm-list");
+  root.replaceChildren();
+
+  document.querySelector("#crm-current-filter").textContent =
+    crmFilterLabel(crmFilter);
+
+  document.querySelectorAll("[data-crm-status]").forEach(button => {
+    button.classList.toggle(
+      "is-active",
+      button.dataset.crmStatus === crmFilter
+    );
+  });
+
+  if (!crmRequests.length) {
+    const empty = document.createElement("div");
+    empty.className = "admin-empty";
+    empty.textContent = crmSearch
+      ? "По этому запросу ничего не найдено."
+      : "В этом разделе заявок пока нет.";
+    root.appendChild(empty);
+    return;
+  }
+
+  for (const request of crmRequests) {
+    const card = document.createElement("article");
+    card.className = "crm-card";
+
+    const head = document.createElement("div");
+    head.className = "crm-card-head";
+
+    const identity = document.createElement("div");
+    identity.className = "crm-card-identity";
+
+    const title = document.createElement("strong");
+    title.textContent = request.name || "Без имени";
+
+    const meta = document.createElement("span");
+    meta.textContent =
+      `${request.email || "email не указан"} · ${formatWorkspaceDate(request.created_at)}`;
+
+    const badge = document.createElement("span");
+    badge.className = "project-badge";
+    badge.textContent =
+      CRM_STATUS_LABELS[request.status] || request.status;
+
+    identity.append(title, meta, badge);
+
+    const contacts = document.createElement("div");
+    contacts.className = "crm-contact-actions";
+
+    if (request.email) {
+      const email = document.createElement("a");
+      email.className = "admin-mini";
+      email.href = `mailto:${request.email}`;
+      email.textContent = "Email";
+      contacts.appendChild(email);
+    }
+
+    if (request.contact) {
+      const copy = document.createElement("button");
+      copy.type = "button";
+      copy.className = "admin-mini";
+      copy.textContent = "Скопировать контакт";
+      copy.addEventListener("click", async () => {
+        try {
+          await navigator.clipboard.writeText(request.contact);
+          setStatus(
+            document.querySelector("#crm-status"),
+            "Контакт скопирован.",
+            "success"
+          );
+        } catch {
+          setStatus(
+            document.querySelector("#crm-status"),
+            "Не удалось скопировать контакт.",
+            "error"
+          );
+        }
+      });
+      contacts.appendChild(copy);
+    }
+
+    head.append(identity, contacts);
+
+    const body = document.createElement("div");
+    body.className = "crm-card-body";
+
+    const contactLine = document.createElement("p");
+    contactLine.className = "crm-contact-line";
+    contactLine.textContent = request.contact
+      ? `Контакт: ${request.contact}`
+      : "Дополнительный контакт не указан.";
+
+    const message = document.createElement("p");
+    message.className = "crm-message";
+    message.textContent = request.message || "—";
+
+    body.append(contactLine, message);
+
+    const footer = document.createElement("div");
+    footer.className = "crm-card-footer";
+
+    const actions = document.createElement("div");
+    actions.className = "admin-row-actions";
+    actions.append(
+      createCrmStatusButton(request, "new", "Новая"),
+      createCrmStatusButton(request, "in_progress", "В работу"),
+      createCrmStatusButton(request, "replied", "Ответили"),
+      createCrmStatusButton(request, "closed", "Выполнено")
+    );
+
+    const registration = document.createElement("span");
+    registration.className = "client-admin-muted";
+    registration.textContent = request.client_user_id
+      ? "Клиентский кабинет привязан"
+      : "Кабинет ещё не привязан";
+
+    footer.append(actions, registration);
+    card.append(head, body, footer);
+    root.appendChild(card);
+  }
+}
+
+async function loadCrm() {
+  const status = document.querySelector("#crm-status");
+  setStatus(status, "Загружаю заявки…");
+
+  try {
+    const data = await crmApi({
+      action: "list",
+      status: crmFilter,
+      query: crmSearch
+    });
+
+    crmRequests = data.requests || [];
+
+    document.querySelector("#crm-count-new").textContent =
+      data.counts?.new ?? 0;
+    document.querySelector("#crm-count-work").textContent =
+      data.counts?.in_progress ?? 0;
+    document.querySelector("#crm-count-replied").textContent =
+      data.counts?.replied ?? 0;
+    document.querySelector("#crm-count-closed").textContent =
+      data.counts?.closed ?? 0;
+
+    renderCrmRequests();
+
+    setStatus(
+      status,
+      crmRequests.length
+        ? `Показано заявок: ${crmRequests.length}`
+        : "",
+      crmRequests.length ? "success" : ""
+    );
+  } catch (error) {
+    setStatus(status, `Ошибка: ${error.message}`, "error");
+  }
+}
+
 function renderClientAuthEvents() {
   const root = document.querySelector("#client-auth-events");
   if (!root) return;
@@ -1700,6 +1933,7 @@ async function showDashboard() {
   dashboardView.classList.remove("is-hidden");
   adminUser.textContent = sessionStorage.getItem(EMAIL_KEY) || "Администратор";
   await loadProjects();
+  await loadCrm();
   await loadClients();
   await loadAnalytics(analyticsDays);
   await loadHealth();
@@ -1955,6 +2189,25 @@ refreshButton.addEventListener("click", async () => {
   await loadAnalytics(analyticsDays);
   await loadHealth();
   await loadBackups();
+});
+
+document.querySelector("#crm-refresh-button")?.addEventListener("click", loadCrm);
+
+document.querySelectorAll("[data-crm-status]").forEach(button => {
+  button.addEventListener("click", async () => {
+    crmFilter = button.dataset.crmStatus || "all";
+    await loadCrm();
+  });
+});
+
+let crmSearchTimer = null;
+document.querySelector("#crm-search")?.addEventListener("input", event => {
+  crmSearch = event.currentTarget.value.trim();
+
+  window.clearTimeout(crmSearchTimer);
+  crmSearchTimer = window.setTimeout(() => {
+    loadCrm();
+  }, 250);
 });
 
 document.querySelector("#client-create-form")?.addEventListener("submit", async (event) => {
