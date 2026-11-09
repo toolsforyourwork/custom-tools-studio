@@ -32,6 +32,11 @@ assert(read("admin/admin.js").includes("admin-register"), "admin invite registra
 assert(read("admin/admin.js").includes("admin-crm"), "admin CRM API client missing");
 assert(read("admin/admin.js").includes('action: "update_request"'), "CRM request editor missing");
 assert(read("admin/admin.js").includes('"create_approval"'), "admin approval flow missing");
+const contactsHtml = read("contacts.html");
+assert(contactsHtml.includes('id="mail-chooser"'), "contacts: webmail chooser missing");
+assert(contactsHtml.includes("data-email-chooser"), "contacts: email chooser triggers missing");
+assert(!contactsHtml.includes("mailto:"), "contacts: direct mailto must not bypass chooser");
+assert(read("script.js").includes("webmailComposeUrl"), "script: webmail compose routing missing");
 
 const requiredProdUrls = [
   "https://toolsforyourwork.github.io/custom-tools-studio/",
