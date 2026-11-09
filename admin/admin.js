@@ -12,6 +12,9 @@ const loginView = document.querySelector("#login-view");
 const dashboardView = document.querySelector("#dashboard-view");
 const loginForm = document.querySelector("#login-form");
 const loginStatus = document.querySelector("#login-status");
+const adminInviteForm = document.querySelector("#admin-invite-form");
+const adminInviteStatus = document.querySelector("#admin-invite-status");
+const showAdminInviteButton = document.querySelector("#show-admin-invite");
 const dashboardStatus = document.querySelector("#dashboard-status");
 const editorStatus = document.querySelector("#editor-status");
 const adminUser = document.querySelector("#admin-user");
@@ -89,6 +92,34 @@ function saveSession(data) {
   sessionStorage.setItem(USER_KEY, data.user?.id || sessionStorage.getItem(USER_KEY) || "");
 }
 
+function decodeJwtPayload(token) {
+  try {
+    const part = String(token || "").split(".")[1];
+    if (!part) return null;
+    const normalized = part.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = normalized + "=".repeat((4 - normalized.length % 4) % 4);
+    const bytes = Uint8Array.from(atob(padded), char => char.charCodeAt(0));
+    return JSON.parse(new TextDecoder().decode(bytes));
+  } catch {
+    return null;
+  }
+}
+
+function consumeAuthHash() {
+  if (!window.location.hash) return false;
+  const params = new URLSearchParams(window.location.hash.slice(1));
+  const accessToken = params.get("access_token");
+  const refreshToken = params.get("refresh_token");
+  if (!accessToken || !refreshToken) return false;
+  const payload = decodeJwtPayload(accessToken) || {};
+  saveSession({
+    access_token: accessToken,
+    refresh_token: refreshToken,
+    user: { id: payload.sub || "", email: payload.email || "" }
+  });
+  window.history.replaceState(null, "", window.location.pathname + window.location.search);
+  return true;
+}
 function clearSession() {
   sessionStorage.removeItem(TOKEN_KEY);
   sessionStorage.removeItem(REFRESH_KEY);
@@ -161,6 +192,33 @@ async function api(path, options = {}, retry = true) {
   return data;
 }
 
+async function adminRegisterApi(body) {
+  const response = await fetch(SUPABASE_URL + "/functions/v1/admin-register", {
+    method: "POST",
+    headers: {
+      apikey: SUPABASE_KEY,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(body)
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || !data?.ok) {
+    throw new Error(data?.error || ("HTTP " + response.status));
+  }
+  return data;
+}
+
+function adminInviteErrorMessage(error) {
+  const code = String(error?.message || "");
+  return {
+    invite_not_found: "Для этого email нет активного приглашения администратора.",
+    invite_already_used: "Это приглашение уже использовано.",
+    already_registered: "Администратор с этим email уже зарегистрирован.",
+    account_exists: "Аккаунт с этим email уже существует.",
+    weak_password: "Пароль: минимум 10 символов, хотя бы одна буква и одна цифра.",
+    email_rate_limited: "Слишком много писем. Попробуй повторить позже."
+  }[code] || code || "Не удалось создать доступ.";
+}
 async function storageMaintenanceApi(body, retry = true) {
   const response = await fetch(`${SUPABASE_URL}/functions/v1/storage-maintenance`, {
     method: "POST",
@@ -2041,6 +2099,36 @@ async function showDashboard() {
   await loadBackups();
 }
 
+showAdminInviteButton?.addEventListener("click", () => {
+  adminInviteForm?.classList.toggle("is-hidden");
+});
+
+adminInviteForm?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const email = document.querySelector("#admin-invite-email").value.trim();
+  const password = document.querySelector("#admin-invite-password").value;
+  const confirmPassword = document.querySelector("#admin-invite-password-confirm").value;
+  const button = event.currentTarget.querySelector('button[type="submit"]');
+  if (password !== confirmPassword) {
+    setStatus(adminInviteStatus, "Пароли не совпадают.", "error");
+    return;
+  }
+  if (password.length < 10 || !/[A-Za-z]/.test(password) || !/[0-9]/.test(password)) {
+    setStatus(adminInviteStatus, "Пароль: минимум 10 символов, хотя бы одна буква и одна цифра.", "error");
+    return;
+  }
+  button.disabled = true;
+  setStatus(adminInviteStatus, "Создаю доступ…");
+  try {
+    await adminRegisterApi({ action: "register", email, password });
+    event.currentTarget.reset();
+    setStatus(adminInviteStatus, "Доступ создан. Открой письмо Supabase и подтверди email, затем войди в админку.", "success");
+  } catch (error) {
+    setStatus(adminInviteStatus, adminInviteErrorMessage(error), "error");
+  } finally {
+    button.disabled = false;
+  }
+});
 loginForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   setStatus(loginStatus, "Проверяю доступ…");
@@ -2529,10 +2617,21 @@ logoutButton.addEventListener("click", async () => {
 });
 
 (async () => {
+  consumeAuthHash();
+  const params = new URLSearchParams(window.location.search);
+  if (params.get("invite") === "1") {
+    adminInviteForm?.classList.remove("is-hidden");
+    const invitedEmail = params.get("email");
+    if (invitedEmail) {
+      document.querySelector("#admin-invite-email").value = invitedEmail;
+    }
+  }
   if (!currentToken()) return;
-
   try {
     await showDashboard();
+    if (params.get("invite") === "1") {
+      window.history.replaceState(null, "", window.location.pathname);
+    }
   } catch {
     clearSession();
   }
