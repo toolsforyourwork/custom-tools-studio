@@ -10,6 +10,7 @@ permissions:
 
 jobs:
   update-site-index:
+    if: vars.STUDIO_PAGES_ACTIONS_DEPLOY != 'true'
     runs-on: ubuntu-latest
 
     steps:
