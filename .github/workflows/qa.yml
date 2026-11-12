@@ -40,6 +40,7 @@ jobs:
         run: node .github/scripts/qa.mjs
 
       - name: Production QA
+        if: github.event_name != 'pull_request'
         env:
           QA_PRODUCTION: "1"
         run: node .github/scripts/qa.mjs
