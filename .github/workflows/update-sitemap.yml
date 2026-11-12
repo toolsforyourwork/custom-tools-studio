@@ -10,6 +10,7 @@ permissions:
 
 jobs:
   update-site-index:
+    if: vars.STUDIO_PAGES_ACTIONS_DEPLOY != 'true'
     runs-on: ubuntu-latest
 
     steps:
@@ -17,90 +18,7 @@ jobs:
 
       - name: Generate sitemap and case pages
         shell: pwsh
-        run: |
-          $base = "https://toolsforyourwork.github.io/custom-tools-studio"
-          $supabaseUrl = "https://bpdqosfgxqawbzljafgb.supabase.co"
-          $ogBase = "https://bpdqosfgxqawbzljafgb.supabase.co/functions/v1/og-image"
-          $key = "sb_publishable_FQaK_TPRAjA1NMcVG9zqzw_VFvqaRXk"
-          $headers = @{ apikey = $key }
-          $uri = "$supabaseUrl/functions/v1/public-content?mode=list"
-          $content = Invoke-RestMethod -Uri $uri -Headers $headers
-          $projects = $content.projects
-
-          $urls = @(
-            @{ loc = "$base/"; priority = "1.0" },
-            @{ loc = "$base/approach.html"; priority = "0.8" },
-            @{ loc = "$base/projects.html"; priority = "0.9" },
-            @{ loc = "$base/identity.html"; priority = "0.5" },
-            @{ loc = "$base/contacts.html"; priority = "0.6" },
-            @{ loc = "$base/request.html"; priority = "0.8" },
-            @{ loc = "$base/privacy.html"; priority = "0.3" }
-          )
-
-          $lines = @(
-            '<?xml version="1.0" encoding="UTF-8"?>',
-            '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
-          )
-
-          foreach ($item in $urls) {
-            $lines += "  <url><loc>$($item.loc)</loc><priority>$($item.priority)</priority></url>"
-          }
-
-          if (Test-Path "case") { Remove-Item "case" -Recurse -Force }
-          New-Item -ItemType Directory -Path "case" -Force | Out-Null
-          $template = Get-Content "project.html" -Raw
-
-          foreach ($project in $projects) {
-            $slug = [string]$project.slug
-            $encodedSlug = [System.Uri]::EscapeDataString($slug)
-            $caseUrl = "$base/case/$encodedSlug/"
-            $title = [string]$project.title
-            $description = [string]$project.short_description
-
-            if ([string]::IsNullOrWhiteSpace($description)) {
-              $description = "Кейс студии кастомных цифровых инструментов: задача, решение и результат."
-            }
-
-            if ($description.Length -gt 160) {
-              $description = $description.Substring(0, 159) + "…"
-            }
-
-            $htmlTitle = [System.Net.WebUtility]::HtmlEncode("$title — Tools for your work")
-            $htmlProjectTitle = [System.Net.WebUtility]::HtmlEncode($title)
-            $htmlDescription = [System.Net.WebUtility]::HtmlEncode($description)
-            $htmlCaseUrl = [System.Net.WebUtility]::HtmlEncode($caseUrl)
-            $ogImage = "$ogBase?slug=$encodedSlug"
-            $htmlOgImage = [System.Net.WebUtility]::HtmlEncode($ogImage)
-
-            $page = $template
-            $page = [regex]::Replace($page, '<title>.*?</title>', "<title>$htmlTitle</title>", 'Singleline')
-            $page = [regex]::Replace($page, '<meta name="description" content="[^"]*">', '<meta name="description" content="' + $htmlDescription + '">')
-            $page = [regex]::Replace($page, '<link rel="canonical" href="[^"]*">', '<link rel="canonical" href="' + $htmlCaseUrl + '">')
-            $page = [regex]::Replace($page, '<meta property="og:type" content="[^"]*">', '<meta property="og:type" content="article">')
-            $page = [regex]::Replace($page, '<meta property="og:title" content="[^"]*">', '<meta property="og:title" content="' + $htmlProjectTitle + '">')
-            $page = [regex]::Replace($page, '<meta property="og:description" content="[^"]*">', '<meta property="og:description" content="' + $htmlDescription + '">')
-            $page = [regex]::Replace($page, '<meta property="og:url" content="[^"]*">', '<meta property="og:url" content="' + $htmlCaseUrl + '">')
-            $page = [regex]::Replace($page, '<meta property="og:image" content="[^"]*">', '<meta property="og:image" content="' + $htmlOgImage + '">')
-            $page = [regex]::Replace($page, '<meta name="twitter:title" content="[^"]*">', '<meta name="twitter:title" content="' + $htmlProjectTitle + '">')
-            $page = [regex]::Replace($page, '<meta name="twitter:description" content="[^"]*">', '<meta name="twitter:description" content="' + $htmlDescription + '">')
-            $page = [regex]::Replace($page, '<meta name="twitter:image" content="[^"]*">', '<meta name="twitter:image" content="' + $htmlOgImage + '">')
-
-            $slugJson = ConvertTo-Json $slug -Compress
-            $urlJson = ConvertTo-Json $caseUrl -Compress
-            $bootstrap = '<script>window.PROJECT_SLUG=' + $slugJson + ';window.PROJECT_SHARE_URL=' + $urlJson + ';</script>' + [Environment]::NewLine + '<script src="/custom-tools-studio/project.js"></script>'
-            $page = $page.Replace('<script src="/custom-tools-studio/project.js"></script>', $bootstrap)
-
-            $caseDir = Join-Path "case" $slug
-            New-Item -ItemType Directory -Path $caseDir -Force | Out-Null
-            [IO.File]::WriteAllText((Join-Path $caseDir "index.html"), $page, [Text.UTF8Encoding]::new($false))
-
-            $lastmod = ([DateTimeOffset]$project.updated_at).ToString("yyyy-MM-dd")
-            $escapedLoc = [System.Security.SecurityElement]::Escape($caseUrl)
-            $lines += "  <url><loc>$escapedLoc</loc><lastmod>$lastmod</lastmod><priority>0.8</priority></url>"
-          }
-
-          $lines += '</urlset>'
-          [IO.File]::WriteAllLines("sitemap.xml", $lines, [Text.UTF8Encoding]::new($false))
+        run: ./.github/scripts/generate-site-index.ps1 -SiteDirectory $PWD.Path
 
       - name: Commit generated files if changed
         shell: pwsh

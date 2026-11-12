@@ -1,0 +1,129 @@
+name: GitHub Pages
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/publish-pages.yml'
+      - '.github/workflows/update-sitemap.yml'
+      - '.github/scripts/generate-site-index.ps1'
+      - 'project.html'
+  push:
+    branches:
+      - main
+  schedule:
+    - cron: '17 */6 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.event_name == 'pull_request' && format('pages-preview-{0}', github.event.pull_request.number) || 'studio-pages-publish' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  build-pages:
+    if: github.event_name == 'pull_request' || (github.ref == 'refs/heads/main' && vars.STUDIO_PAGES_ACTIONS_DEPLOY == 'true')
+    runs-on: ubuntu-latest
+    env:
+      QA_PRODUCTION: '0'
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: Copy tracked site files
+        shell: bash
+        run: |
+          site_dir="$RUNNER_TEMP/pages-site"
+          mkdir -p "$site_dir"
+          git archive --format=tar HEAD | tar --exclude=.github -xf - -C "$site_dir"
+          printf 'SITE_DIR=%s\n' "$site_dir" >> "$GITHUB_ENV"
+
+      - name: Generate and check sample case
+        if: github.event_name == 'pull_request'
+        shell: pwsh
+        run: |
+          $fixture = Join-Path $env:RUNNER_TEMP 'pages-preview-projects.json'
+          @{
+            projects = @(@{
+              slug = 'qa-preview-case'
+              title = 'Preview & QA'
+              short_description = 'Sample case for the Pages build.'
+              updated_at = '2026-01-01T00:00:00Z'
+            })
+          } | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $fixture -Encoding utf8
+
+          ./.github/scripts/generate-site-index.ps1 -SiteDirectory $env:SITE_DIR -ProjectsJsonPath $fixture
+
+          $caseFile = Join-Path $env:SITE_DIR 'case/qa-preview-case/index.html'
+          $casePage = Get-Content -LiteralPath $caseFile -Raw
+          if (-not $casePage.Contains('<title>Preview &amp; QA — Tools for your work</title>')) {
+            throw 'Generated case is missing its escaped title.'
+          }
+          if (-not $casePage.Contains('window.PROJECT_SLUG="qa-preview-case"')) {
+            throw 'Generated case is missing its project slug.'
+          }
+          if (-not $casePage.Contains('/functions/v1/og-image?slug=qa-preview-case"')) {
+            throw 'Generated case is missing its share image URL.'
+          }
+
+          [xml] $sitemap = Get-Content -LiteralPath (Join-Path $env:SITE_DIR 'sitemap.xml') -Raw
+          $caseUrl = 'https://toolsforyourwork.github.io/custom-tools-studio/case/qa-preview-case/'
+          if ($caseUrl -notin $sitemap.urlset.url.loc) {
+            throw 'Generated sitemap is missing the sample case URL.'
+          }
+
+      - name: Generate sitemap and published case pages
+        if: github.event_name != 'pull_request'
+        shell: pwsh
+        run: ./.github/scripts/generate-site-index.ps1 -SiteDirectory $env:SITE_DIR
+
+      - name: Check packaged site
+        shell: bash
+        run: |
+          cd "$SITE_DIR"
+          node "$GITHUB_WORKSPACE/.github/scripts/qa.mjs"
+
+      - name: Upload Pages archive
+        uses: actions/upload-pages-artifact@v4
+        with:
+          name: ${{ github.event_name == 'pull_request' && 'pages-preview' || 'github-pages' }}
+          path: ${{ env.SITE_DIR }}
+          retention-days: 7
+
+  deploy-pages:
+    needs: build-pages
+    if: >-
+      github.ref == 'refs/heads/main' && vars.STUDIO_PAGES_ACTIONS_DEPLOY == 'true' &&
+      (github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Check that the build still matches main
+        id: current
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          main_sha=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha')
+          if [ "$main_sha" = "$GITHUB_SHA" ]; then
+            echo 'matches=true' >> "$GITHUB_OUTPUT"
+          else
+            echo '::notice::main advanced during this run. The newer revision has its own build.'
+          fi
+
+      - name: Publish to GitHub Pages
+        id: deployment
+        if: steps.current.outputs.matches == 'true'
+        uses: actions/deploy-pages@v4
+        with:
+          artifact_name: github-pages
