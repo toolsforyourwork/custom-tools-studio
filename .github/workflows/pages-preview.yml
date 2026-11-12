@@ -17,7 +17,6 @@ jobs:
   build-preview:
     runs-on: ubuntu-latest
     env:
-      SITE_DIR: ${{ runner.temp }}/pages-preview
       QA_PRODUCTION: '0'
     steps:
       - uses: actions/checkout@v5
@@ -27,8 +26,10 @@ jobs:
       - name: Copy tracked site files
         shell: bash
         run: |
-          mkdir -p "$SITE_DIR"
-          git archive --format=tar HEAD | tar --exclude=.github -xf - -C "$SITE_DIR"
+          site_dir="$RUNNER_TEMP/pages-preview"
+          mkdir -p "$site_dir"
+          git archive --format=tar HEAD | tar --exclude=.github -xf - -C "$site_dir"
+          printf 'SITE_DIR=%s\n' "$site_dir" >> "$GITHUB_ENV"
 
       - name: Generate and check sample case
         shell: pwsh
