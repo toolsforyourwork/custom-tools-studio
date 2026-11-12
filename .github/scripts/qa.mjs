@@ -2,6 +2,9 @@ import fs from "node:fs";
 import path from "node:path";
 
 const root = process.cwd();
+const errors = [];
+const warnings = [];
+
 const publicPages = [
   "index.html",
   "approach.html",
@@ -57,9 +60,6 @@ const requiredProdUrls = [
   "https://toolsforyourwork.github.io/custom-tools-studio/robots.txt",
   "https://toolsforyourwork.github.io/custom-tools-studio/sitemap.xml"
 ];
-
-const errors = [];
-const warnings = [];
 
 function read(file) {
   return fs.readFileSync(path.join(root, file), "utf8");
