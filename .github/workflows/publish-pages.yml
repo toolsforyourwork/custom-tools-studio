@@ -104,6 +104,8 @@ jobs:
       contents: read
       pages: write
       id-token: write
+    outputs:
+      page_url: ${{ steps.deployment.outputs.page_url }}
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -127,3 +129,22 @@ jobs:
         uses: actions/deploy-pages@v4
         with:
           artifact_name: github-pages
+
+  verify-published-site:
+    needs: deploy-pages
+    if: >-
+      github.event_name != 'pull_request' &&
+      needs.deploy-pages.result == 'success' &&
+      needs.deploy-pages.outputs.page_url != ''
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: Production QA after deployment
+        env:
+          QA_PRODUCTION: "1"
+        run: node .github/scripts/qa.mjs
